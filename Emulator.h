@@ -14,6 +14,12 @@ public:
 	void Shutdown();
 
 private:
+	bool LoadROM();
+
 	const std::string romPath;
 	Renderer* renderer = nullptr;
+	
+	int programCounter;
+	int indexRegister : 16;
+
 };

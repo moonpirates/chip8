@@ -29,21 +29,21 @@ void Renderer::Render()
 	UpdateRenderScale();
 
 	// Clear screen
-	SDL_SetRenderDrawColor(sdlRenderer , 0, 0, 0, 255);
-	SDL_RenderClear(sdlRenderer);
+	//SDL_SetRenderDrawColor(sdlRenderer , 0, 0, 0, 255);
+	//SDL_RenderClear(sdlRenderer);
 
-	// Place test pixels
-	for (float y = 0; y < window->GetCanvasHeight(); y++)
-	{
-		for (float x = 0; x < window->GetCanvasWidth(); x++)
-		{
-			int r = (x / window->GetCanvasWidth()) * 255;
-			int g = (y / window->GetCanvasHeight()) * 255;
+	//// Place test pixels
+	//for (float y = 0; y < window->GetCanvasHeight(); y++)
+	//{
+	//	for (float x = 0; x < window->GetCanvasWidth(); x++)
+	//	{
+	//		int r = (x / window->GetCanvasWidth()) * 255;
+	//		int g = (y / window->GetCanvasHeight()) * 255;
 
-			SDL_SetRenderDrawColor(sdlRenderer, r, g, 0, 255);
-			SDL_RenderPoint(sdlRenderer, x, y);
-		}
-	}
+	//		SDL_SetRenderDrawColor(sdlRenderer, r, g, 0, 255);
+	//		SDL_RenderPoint(sdlRenderer, x, y);
+	//	}
+	//}
 
 	// Render
 	SDL_RenderPresent(sdlRenderer);
