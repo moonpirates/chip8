@@ -2,6 +2,7 @@
 #include "Window.h"
 #include "SDL3/SDL.h"
 #include <iostream>
+#include "SDL3/SDL_events.h"
 
 Renderer::Renderer(Window* window) : window(window)
 {
@@ -17,11 +18,19 @@ bool Renderer::Init()
 		return false;
 	}
 
+	SDL_AddEventWatch(OnWindowEvent, this);
+
+	initialized = true;
+
 	return true;
 }
 
 void Renderer::Shutdown()
 {
+	if (!initialized)
+		return;
+
+	SDL_RemoveEventWatch(OnWindowEvent, this);
 	SDL_DestroyRenderer(sdlRenderer);
 }
 
@@ -81,6 +90,17 @@ void Renderer::Display(uint8_t x, uint8_t y, uint8_t n, uint16_t I, vector<uint8
 	}
 
 	redraw = true;
+}
+
+bool Renderer::OnWindowEvent(void* data, SDL_Event* event)
+{
+	if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED || event->type == SDL_EVENT_WINDOW_RESIZED)
+	{
+		Renderer* renderer = static_cast<Renderer*>(data);
+		renderer->redraw = true;
+	}
+
+	return false;
 }
 
 void Renderer::UpdateRenderScale() const
