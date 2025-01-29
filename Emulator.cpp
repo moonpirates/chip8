@@ -141,15 +141,6 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 	uint8_t nn = opcode & 0xFF;
 	uint16_t nnn = opcode & 0xFFF;
 
-	/*
-	00E0 (clear screen)
-	1NNN (jump)
-	6XNN (set register VX)
-	7XNN (add value to register VX)
-	ANNN (set index register I)
-	DXYN (display/draw)
-	*/
-
 	switch (GetOpcodeNibble(opcode, 0))
 	{
 		case 0x0:
@@ -165,10 +156,12 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 				}
 
 				// Returns from a subroutine.
-				//case 0xEE:
-				//{
-				//	break;
-				//}
+				case 0xEE:
+				{
+					PC = stack.top();
+					stack.pop();
+					break;
+				}
 
 				default:
 				{
@@ -189,10 +182,12 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		}
 		
 		// Calls subroutine at NNN
-		//case 0x2:
-		// {
-		//	break;
-		// }
+		case 0x2:
+		{
+			stack.push(PC);
+			PC = nnn;
+			break;
+		}
 
 		// Skips the next instruction if VX equals NN
 		case 0x3:
@@ -363,10 +358,15 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		}
 		
 		// Jumps to the address NNN plus V0.
-		//case 0xB:
-		// {
-		//	break;
-		// }
+		case 0xB:
+		{
+#ifdef CHIP8_ORIGINAL
+			I = nnn + vars[0];
+#else
+			I = nnn + vars[x];
+#endif
+			break;
+		}
 		
 		// Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN.
 		//case 0xC:
@@ -443,7 +443,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 				// increased by 1 for each value written, but I itself is left unmodified.
 				case 0x55:
 				{
-					uint8_t len = memory[x];
+					uint8_t len = vars[x];
 					for (uint8_t i = 0; i <= len; i++)
 #ifdef CHIP8_ORIGINAL
 						memory[I++] = vars[i];
@@ -458,7 +458,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 				// from I is increased by 1 for each value read, but I itself is left unmodified.
 				case 0x65:
 				{
-					uint8_t len = memory[x];
+					uint8_t len = vars[x];
 
 					for (uint8_t i = 0; i <= len; i++)
 #ifdef CHIP8_ORIGINAL
