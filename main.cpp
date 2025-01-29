@@ -4,7 +4,8 @@
 int main(int argc, char* argv[])
 {
 	//TODO parse arguments to rom path
-	Chip8 chip8 = Chip8("IBM Logo.ch8");
+	//Chip8 chip8 = Chip8("IBM Logo.ch8");
+	Chip8 chip8 = Chip8("BC_test.ch8");
 	
 	// Init
 	if (!chip8.Init())
