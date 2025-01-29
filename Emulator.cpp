@@ -443,8 +443,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 				// increased by 1 for each value written, but I itself is left unmodified.
 				case 0x55:
 				{
-					uint8_t len = vars[x];
-					for (uint8_t i = 0; i <= len; i++)
+					for (uint8_t i = 0; i <= x; i++)
 #ifdef CHIP8_ORIGINAL
 						memory[I++] = vars[i];
 #else
@@ -458,9 +457,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 				// from I is increased by 1 for each value read, but I itself is left unmodified.
 				case 0x65:
 				{
-					uint8_t len = vars[x];
-
-					for (uint8_t i = 0; i <= len; i++)
+					for (uint8_t i = 0; i <= x; i++)
 #ifdef CHIP8_ORIGINAL
 						vars[i] = memory[I++];
 #else
