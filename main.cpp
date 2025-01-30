@@ -7,9 +7,12 @@ int main(int argc, char* argv[])
 	//Chip8 chip8 = Chip8("IBM Logo.ch8");
 	//Chip8 chip8 = Chip8("BC_test.ch8");
 	//Chip8 chip8 = Chip8("test_opcode.ch8");
-	//Chip8 chip8 = Chip8("br8kout.ch8");
+	Chip8 chip8 = Chip8("test_opcode_with_audio.ch8");
+	//Chip8 chip8 = Chip8("breakout.rom");
 	//Chip8 chip8 = Chip8("snake.ch8");
-	Chip8 chip8 = Chip8("keypad.ch8");
+	//Chip8 chip8 = Chip8("keypad.ch8");
+	//Chip8 chip8 = Chip8("pong2.ch8");
+	
 	
 	// Init
 	if (!chip8.Init())
@@ -21,7 +24,7 @@ int main(int argc, char* argv[])
 		// ...
 	}
 
-	// Shutdown
+	// Shutdown 
 	chip8.Shutdown();
 
 	return 0;

@@ -6,25 +6,26 @@
 #include <fstream>
 #include <cassert>
 #include <bit>
+#include <iostream>
 
 const vector<SDL_Scancode> Emulator::KEY_MAP =
 {
-	{ SDL_SCANCODE_X }, // 0x0
-	{ SDL_SCANCODE_1 },	// 0x1
-	{ SDL_SCANCODE_2 },	// 0x2
-	{ SDL_SCANCODE_3 },	// 0x3
-	{ SDL_SCANCODE_Q },	// 0x4
-	{ SDL_SCANCODE_W },	// 0x5
-	{ SDL_SCANCODE_E },	// 0x6
-	{ SDL_SCANCODE_A },	// 0x7
-	{ SDL_SCANCODE_S },	// 0x8
-	{ SDL_SCANCODE_D },	// 0x9
-	{ SDL_SCANCODE_Z },	// 0xA
-	{ SDL_SCANCODE_C },	// 0xB
-	{ SDL_SCANCODE_4 },	// 0xC
-	{ SDL_SCANCODE_R },	// 0xD
-	{ SDL_SCANCODE_F },	// 0xE
-	{ SDL_SCANCODE_V },	// 0xF
+	{ SDL_SCANCODE_X }, // 0
+	{ SDL_SCANCODE_1 }, // 1
+	{ SDL_SCANCODE_2 }, // 2
+	{ SDL_SCANCODE_3 }, // 3
+	{ SDL_SCANCODE_Q }, // 4
+	{ SDL_SCANCODE_W }, // 5
+	{ SDL_SCANCODE_E }, // 6
+	{ SDL_SCANCODE_A }, // 7
+	{ SDL_SCANCODE_S }, // 8
+	{ SDL_SCANCODE_D }, // 9
+	{ SDL_SCANCODE_Z }, // A
+	{ SDL_SCANCODE_C }, // B
+	{ SDL_SCANCODE_4 }, // C
+	{ SDL_SCANCODE_R }, // D
+	{ SDL_SCANCODE_F }, // E
+	{ SDL_SCANCODE_V }, // F
 };
 
 Emulator::Emulator(const string romPath, Renderer* renderer) :
@@ -105,13 +106,6 @@ bool Emulator::LoadROM()
 
 	// Close up
 	file.close();
-
-	for (size_t i = PROGRAM_START; i < PROGRAM_START + fileSize; i += 2)
-	{
-		printf("%02X%02X ", (memory[i]), (memory[i + 1]));
-	}
-
-	cout << endl << "--------------------------------------------------" << endl;
 
 	return true;
 }
@@ -209,7 +203,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		{	
 			switch (nnn)
 			{
-				// Clears the screen.
+				// 00E0. Clears the screen.
 				case 0x0E0:
 				{
 					renderer->Clear();
@@ -217,7 +211,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 					break;
 				}
 
-				// Returns from a subroutine.
+				// 00EE. Returns from a subroutine.
 				case 0xEE:
 				{
 					PC = stack.top();
@@ -235,7 +229,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			break;
 		}
 		
-		// Jumps to address NNN
+		// 1NNN. Jumps to address NNN
 		case 0x1:
 		{
 			PC = nnn;
@@ -243,7 +237,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			break;
 		}
 		
-		// Calls subroutine at NNN
+		// 2NNN. Calls subroutine at NNN
 		case 0x2:
 		{
 			stack.push(PC);
@@ -251,7 +245,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			break;
 		}
 
-		// Skips the next instruction if VX equals NN
+		// 3NNN. Skips the next instruction if VX equals NN
 		case 0x3:
 		{
 			if (vars[x] == nn)
@@ -262,7 +256,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			break;
 		}
 
-		// Skips the next instruction if VX does not equal NN
+		// 4NNN. Skips the next instruction if VX does not equal NN
 		case 0x4:
 		{
 			if (vars[x] != nn)
@@ -273,7 +267,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			break;
 		}
 		
-		// Skips the next instruction if VX equals VY
+		// 5XY0. Skips the next instruction if VX equals VY
 		case 0x5:
 		{
 			if (vars[x] == vars[y])
@@ -284,7 +278,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			break;
 		}
 
-		// Sets VX to NN
+		// 6XNN. Sets VX to NN
 		case 0x6:
 		{
 			vars[x] = nn;
@@ -292,7 +286,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			break;
 		}
 		
-		// Adds NN to VX (carry flag is not changed)
+		// 7XNN. Adds NN to VX (carry flag is not changed)
 		case 0x7:
 		{
 			vars[x] += nn;
@@ -304,35 +298,35 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		{
 			switch (n)
 			{
-				// Sets VX to the value of VY
+				// 8XY0. Sets VX to the value of VY
 				case 0x0:
 				{
 					vars[x] = vars[y];
 					break;
 				}
 
-				// Sets VX to VX or VY. (bitwise OR operation)
+				// 8XY1. Sets VX to VX or VY. (bitwise OR operation)
 				case 0x1:
 				{
 					vars[x] |= vars[y];
 					break;
 				}
 
-				// Sets VX to VX and VY. (bitwise AND operation)
+				// 8XY2. Sets VX to VX and VY. (bitwise AND operation)
 				case 0x2:
 				{
 					vars[x] &= vars[y];
 					break;
 				}
 
-				// Sets VX to VX xor VY.
+				// 8XY3. Sets VX to VX xor VY.
 				case 0x3:
 				{
 					vars[x] ^= vars[y];
 					break;
 				}
 
-				// Adds VY to VX. VF is set to 1 when there's an overflow, and to 0 when there is not.
+				// 8XY4. Adds VY to VX. VF is set to 1 when there's an overflow, and to 0 when there is not.
 				case 0x4:
 				{
 					// Overflow handling
@@ -344,7 +338,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 					break;
 				}
 
-				// VY is subtracted from VX. VF is set to 0 when there's an underflow, and 1 when there is not. 
+				// 8XY5. VY is subtracted from VX. VF is set to 0 when there's an underflow, and 1 when there is not. 
 				// (i.e. VF set to 1 if VX >= VY and 0 if not).
 				case 0x5:
 				{
@@ -355,7 +349,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 					break;
 				}
 
-				// Shifts VX to the right by 1, then stores the least significant bit of VX prior to the shift into VF.
+				// 8XY6. Shifts VX to the right by 1, then stores the least significant bit of VX prior to the shift into VF.
 				case 0x6:
 				{
 #ifdef CHIP8_ORIGINAL
@@ -368,7 +362,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 					break;
 				}
 
-				// Sets VX to VY minus VX. VF is set to 0 when there's an underflow, and 1 when there is not. 
+				// 8XY7. Sets VX to VY minus VX. VF is set to 0 when there's an underflow, and 1 when there is not. 
 				// (i.e. VF set to 1 if VY >= VX).
 				case 0x7:
 				{
@@ -378,7 +372,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 				}
 					break;
 
-				// Shifts VX to the left by 1, then sets VF to 1 if the most significant bit of VX prior to that 
+				// 8XYE. Shifts VX to the left by 1, then sets VF to 1 if the most significant bit of VX prior to that 
 				// shift was set, or to 0 if it was unset.
 				case 0xE:
 				{
@@ -400,7 +394,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			break;
 		}
 		
-		// Skips the next instruction if VX does not equal VY.
+		// 9XY0. Skips the next instruction if VX does not equal VY.
 		case 0x9:
 		{
 			if (vars[x] != vars[y])
@@ -411,7 +405,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			break;
 		}
 		
-		// Sets I to the address NNN.
+		// ANNN. Sets I to the address NNN.
 		case 0xA:
 		{
 			I = nnn;
@@ -419,7 +413,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			break;
 		}
 		
-		// Jumps to the address NNN plus V0.
+		// BNNN. Jumps to the address NNN plus V0.
 		case 0xB:
 		{
 #ifdef CHIP8_ORIGINAL
@@ -430,14 +424,14 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			break;
 		}
 		
-		// Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN.
+		// CXNN. Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN.
 		case 0xC:
 		{
 			vars[x] = (rand() % 256) & nn;
 			break;
 		}
 		
-		// Draws a sprite at coordinate (VX, VY).
+		// DXYN. Draws a sprite at coordinate (VX, VY).
 		case 0xD:
 		{
 			renderer->Display(vars[x], vars[y], n, I, memory, vars);
@@ -450,7 +444,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		{
 			switch (nn)
 			{
-				// Skips the next instruction if the key stored in VX(only consider the lowest nibble) is 
+				// EX9E. Skips the next instruction if the key stored in VX(only consider the lowest nibble) is 
 				// pressed (usually the next instruction is a jump to skip a code block).
 				case 0x9E:
 				{
@@ -461,7 +455,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 					break;
 				}
 
-				// Skips the next instruction if the key stored in VX(only consider the lowest nibble) is 
+				// EXA1. Skips the next instruction if the key stored in VX(only consider the lowest nibble) is 
 				// not pressed (usually the next instruction is a jump to skip a code block).
 				case 0xA1:
 				{
@@ -486,14 +480,14 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		{
 			switch (nn)
 			{
-				// Sets VX to the value of the delay timer.
+				// FX07. Sets VX to the value of the delay timer.
 				case 0x07:
 				{
 					vars[x] = delayTimer;
 					break;
 				}
 
-				// A key press is awaited, and then stored in VX (blocking operation, all instruction halted 
+				// FX0A. A key press is awaited, and then stored in VX (blocking operation, all instruction halted 
 				// until next key event, delay and sound timers should continue processing).
 				case 0x0A:
 				{
@@ -504,28 +498,28 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 					break;
 				}
 
-				// Sets the delay timer to VX.
+				// FX15. Sets the delay timer to VX.
 				case 0x15:
 				{
 					delayTimer = vars[x];
 					break;
 				}
 
-				// Sets the sound timer to VX.
+				// FX18. Sets the sound timer to VX.
 				case 0x18:
 				{
 					soundTimer = vars[x];
 					break;
 				}
 			
-				// Adds VX to I. VF is not affected
+				// FX1E. Adds VX to I. VF is not affected
 				case 0x1E:
 				{
 					I += vars[x];
 					break;
 				}
 
-				// Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). 
+				// FX29. Sets I to the location of the sprite for the character in VX(only consider the lowest nibble). 
 				// Characters 0-F (in hexadecimal) are represented by a 4x5 font.
 				case 0x29:
 				{
@@ -535,7 +529,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 					break;
 				}
 
-				// Stores the binary-coded decimal representation of VX, with the hundreds digit in memory at 
+				// FX33. Stores the binary-coded decimal representation of VX, with the hundreds digit in memory at 
 				// location in I, the tens digit at location I+1, and the ones digit at location I+2.
 				case 0x33:
 				{
@@ -553,7 +547,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 					break;
 				}
 
-				// Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is 
+				// FX55. Stores from V0 to VX (including VX) in memory, starting at address I. The offset from I is 
 				// increased by 1 for each value written, but I itself is left unmodified.
 				case 0x55:
 				{
@@ -567,7 +561,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 					break;
 				}
 
-				// Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset 
+				// FX65. Fills from V0 to VX (including VX) with values from memory, starting at address I. The offset 
 				// from I is increased by 1 for each value read, but I itself is left unmodified.
 				case 0x65:
 				{
