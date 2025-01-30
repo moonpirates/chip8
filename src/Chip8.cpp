@@ -2,6 +2,7 @@
 #include "Window.h"
 #include "Renderer.h"
 #include "Emulator.h"
+#include "Sound.h"
 
 Chip8::Chip8(const std::string romPath) : romPath(romPath)
 {
@@ -23,7 +24,11 @@ bool Chip8::Init()
 	if (!renderer->Init())
 		return false;
 
-	emulator = new Emulator(romPath, renderer);
+	sound = new Sound();
+	if (!sound->Init())
+		return false;
+
+	emulator = new Emulator(romPath, renderer, sound);
 	if (!emulator->Init())
 		return false;
 	
@@ -39,14 +44,17 @@ void Chip8::Shutdown()
 		return;
 
 	emulator->Shutdown();
+	sound->Shutdown();
 	renderer->Shutdown();
 	window->Shutdown();
 
 	delete emulator;
+	delete sound;
 	delete renderer;
 	delete window;
 
 	emulator = nullptr;
+	sound = nullptr;
 	renderer = nullptr;
 	window = nullptr;
 

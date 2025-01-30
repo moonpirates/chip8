@@ -2,11 +2,12 @@
 
 #include "Emulator.h"
 #include "Renderer.h"
+#include "Sound.h"
 #include "SDL3/SDL.h"
 #include <fstream>
 #include <cassert>
-#include <bit>
 #include <iostream>
+#include <bit>
 
 const vector<SDL_Scancode> Emulator::KEY_MAP =
 {
@@ -28,9 +29,10 @@ const vector<SDL_Scancode> Emulator::KEY_MAP =
 	{ SDL_SCANCODE_V }, // F
 };
 
-Emulator::Emulator(const string romPath, Renderer* renderer) :
+Emulator::Emulator(const string romPath, Renderer* renderer, Sound* sound) :
 	romPath(romPath),
 	renderer(renderer),
+	sound(sound),
 	memory(4096, 0),
 	PC(PROGRAM_START),
 	I(0),

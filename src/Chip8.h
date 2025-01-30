@@ -5,6 +5,7 @@
 class Window;
 class Renderer;
 class Emulator;
+class Sound;
 
 class Chip8
 {
@@ -19,6 +20,7 @@ public:
 private:
 	Window* window = nullptr;
 	Renderer* renderer = nullptr;
+	Sound* sound = nullptr;
 	Emulator* emulator = nullptr;
 
 	const std::string romPath;

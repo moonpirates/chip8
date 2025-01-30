@@ -149,17 +149,19 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Chip8.cpp" />
-    <ClCompile Include="Emulator.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="Renderer.cpp" />
-    <ClCompile Include="Window.cpp" />
+    <ClCompile Include="src\Sound.cpp" />
+    <ClCompile Include="src\Chip8.cpp" />
+    <ClCompile Include="src\Emulator.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Renderer.cpp" />
+    <ClCompile Include="src\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Chip8.h" />
-    <ClInclude Include="Emulator.h" />
-    <ClInclude Include="Renderer.h" />
-    <ClInclude Include="Window.h" />
+    <ClInclude Include="src\Sound.h" />
+    <ClInclude Include="src\Chip8.h" />
+    <ClInclude Include="src\Emulator.h" />
+    <ClInclude Include="src\Renderer.h" />
+    <ClInclude Include="src\Window.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

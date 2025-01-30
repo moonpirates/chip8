@@ -1,8 +1,8 @@
 #include "Renderer.h"
 #include "Window.h"
 #include "SDL3/SDL.h"
-#include <iostream>
 #include "SDL3/SDL_events.h"
+#include <iostream>
 
 Renderer::Renderer(Window* window) : window(window)
 {

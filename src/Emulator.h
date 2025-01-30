@@ -7,6 +7,7 @@
 
 // Forward declarations
 class Renderer;
+class Sound;
 enum SDL_Scancode;
 
 // Usings
@@ -17,7 +18,7 @@ class Emulator
 {
 public:
 	// Construction/destruction
-	Emulator(const string romPath, Renderer* renderer);
+	Emulator(const string romPath, Renderer* renderer, Sound* sound);
 
 	// Core functionality
 	bool Init();
@@ -59,6 +60,7 @@ private:
 	// Misc
 	const string romPath;
 	Renderer* renderer = nullptr;
+	Sound* sound = nullptr;
 	float nextOpcodeTime = 0.f;
 	float nextTimerDecrementTime = 0.f;
 };

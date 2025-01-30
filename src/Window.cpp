@@ -4,7 +4,7 @@
 bool Window::Init()
 {
 	// Init SDL
-	if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
+	if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO))
 	{
 		SDL_Log("Could not init SDL: %s", SDL_GetError());
 		return false;
