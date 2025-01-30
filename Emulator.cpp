@@ -5,16 +5,40 @@
 #include "SDL3/SDL.h"
 #include <fstream>
 #include <cassert>
+#include <bit>
 
-Emulator::Emulator(const string romPath, Renderer* renderer) : 
-	romPath(romPath), 
+const vector<SDL_Scancode> Emulator::KEY_MAP =
+{
+	{ SDL_SCANCODE_X }, // 0x0
+	{ SDL_SCANCODE_1 },	// 0x1
+	{ SDL_SCANCODE_2 },	// 0x2
+	{ SDL_SCANCODE_3 },	// 0x3
+	{ SDL_SCANCODE_Q },	// 0x4
+	{ SDL_SCANCODE_W },	// 0x5
+	{ SDL_SCANCODE_E },	// 0x6
+	{ SDL_SCANCODE_A },	// 0x7
+	{ SDL_SCANCODE_S },	// 0x8
+	{ SDL_SCANCODE_D },	// 0x9
+	{ SDL_SCANCODE_Z },	// 0xA
+	{ SDL_SCANCODE_C },	// 0xB
+	{ SDL_SCANCODE_4 },	// 0xC
+	{ SDL_SCANCODE_R },	// 0xD
+	{ SDL_SCANCODE_F },	// 0xE
+	{ SDL_SCANCODE_V },	// 0xF
+};
+
+Emulator::Emulator(const string romPath, Renderer* renderer) :
+	romPath(romPath),
 	renderer(renderer),
 	memory(4096, 0),
 	PC(PROGRAM_START),
 	I(0),
-	vars(16, 0)
+	vars(16, 0),
+	delayTimer(0),
+	soundTimer(0),
+	keys(0)
 {
-	
+	srand(time(0));
 }
 
 bool Emulator::Init()
@@ -29,22 +53,18 @@ bool Emulator::Init()
 
 bool Emulator::Run()
 {
-	SDL_Event e;
-	if (SDL_PollEvent(&e))
-	{
-		if (e.type == SDL_EVENT_QUIT)
-			return false;
+	if (!HandleEvents())
+		return false;
 
-		if (e.type == SDL_EVENT_KEY_UP && e.key.key == SDLK_ESCAPE)
-			return false;
-	}
+	HandleKeyboard();
+	HandleTimers();
 
 	if (SDL_GetTicks() < nextOpcodeTime)
 		return true;
 
 	Opcode opcode = Fetch();
 	DecodeAndExecute(opcode);
-	nextOpcodeTime = SDL_GetTicks() + (1000.f / OPCODES_PER_SECOND);
+	nextOpcodeTime = SDL_GetTicks() + (1000.f / OPCODES_FREQUENCY);
 
 	return true;
 }
@@ -122,6 +142,48 @@ void Emulator::LoadFont()
 	memcpy(&memory[FONT_START], FONT_DATA.data(), FONT_DATA.size());
 }
 
+bool Emulator::HandleEvents()
+{
+	SDL_Event e;
+	if (SDL_PollEvent(&e))
+	{
+		if (e.type == SDL_EVENT_QUIT)
+			return false;
+
+		if (e.type == SDL_EVENT_KEY_UP && e.key.key == SDLK_ESCAPE)
+			return false;
+	}
+
+	return true;
+}
+
+void Emulator::HandleKeyboard()
+{
+	const bool* keyState = SDL_GetKeyboardState(nullptr);
+	keys = 0;
+	
+	//TODO ensure this translates to other keyboard layouts like AZERTY
+	for (size_t i = 0; i < KEY_MAP.size(); i++)
+	{
+		SDL_Scancode scancode = KEY_MAP[i];
+		keys |= keyState[scancode] << i;
+	}
+}
+
+void Emulator::HandleTimers()
+{
+	if (SDL_GetTicks() < nextTimerDecrementTime)
+		return;
+
+	if (delayTimer > 0)
+		delayTimer--;
+
+	if (soundTimer > 0)
+		soundTimer--;
+
+	nextTimerDecrementTime = SDL_GetTicks() + (1000.f / TIMER_DECREMENT_FREQUENCY);
+}
+
 Opcode Emulator::Fetch()
 {
 	uint8_t opcodeA = memory[PC];
@@ -151,7 +213,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 				case 0x0E0:
 				{
 					renderer->Clear();
-					printf("[CLEAR]\n");
+					//printf("[CLEAR]\n");
 					break;
 				}
 
@@ -177,7 +239,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		case 0x1:
 		{
 			PC = nnn;
-			printf("[SET PC] %02X\n", nnn);
+			//printf("[SET PC] %02X\n", nnn);
 			break;
 		}
 		
@@ -195,7 +257,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			if (vars[x] == nn)
 			{
 				PC += 2;
-				printf("[SKIP] vars[%d] (%d) == %d\n", x, vars[x], nn);
+				//printf("[SKIP] vars[%d] (%d) == %d\n", x, vars[x], nn);
 			}
 			break;
 		}
@@ -206,7 +268,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			if (vars[x] != nn)
 			{
 				PC += 2;
-				printf("[SKIP] vars[%d] (%d) != %d\n", x, vars[x], nn);
+				//printf("[SKIP] vars[%d] (%d) != %d\n", x, vars[x], nn);
 			}
 			break;
 		}
@@ -217,7 +279,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			if (vars[x] == vars[y])
 			{
 				PC += 2;
-				printf("[SKIP] vars[%d] (%d) == vars[%d] (%d)\n", x, vars[x], y, vars[y]);
+				//printf("[SKIP] vars[%d] (%d) == vars[%d] (%d)\n", x, vars[x], y, vars[y]);
 			}
 			break;
 		}
@@ -226,7 +288,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		case 0x6:
 		{
 			vars[x] = nn;
-			printf("[SET] vars[%d] = %d\n", x, nn);
+			//printf("[SET] vars[%d] = %d\n", x, nn);
 			break;
 		}
 		
@@ -234,7 +296,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		case 0x7:
 		{
 			vars[x] += nn;
-			printf("[INCREMENT] vars[%d] + %d\n", x, nn);
+			//printf("[INCREMENT] vars[%d] + %d\n", x, nn);
 			break;
 		}
 		
@@ -344,7 +406,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			if (vars[x] != vars[y])
 			{
 				PC += 2;
-				printf("[SKIP] vars[%d] (%d) != vars[%d] (%d)\n", x, vars[x], y, vars[y]);
+				//printf("[SKIP] vars[%d] (%d) != vars[%d] (%d)\n", x, vars[x], y, vars[y]);
 			}
 			break;
 		}
@@ -353,7 +415,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		case 0xA:
 		{
 			I = nnn;
-			printf("[SET I] %02X\n", nnn);
+			//printf("[SET I] %02X\n", nnn);
 			break;
 		}
 		
@@ -369,40 +431,92 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		}
 		
 		// Sets VX to the result of a bitwise and operation on a random number (Typically: 0 to 255) and NN.
-		//case 0xC:
-		// {
-		//	break;
-		// }
+		case 0xC:
+		{
+			vars[x] = (rand() % 256) & nn;
+			break;
+		}
 		
 		// Draws a sprite at coordinate (VX, VY).
 		case 0xD:
 		{
 			renderer->Display(vars[x], vars[y], n, I, memory, vars);
-			printf("[DISPLAY] x: %d y: %d, height: %d\n", vars[x], vars[y], n);
+			//printf("[DISPLAY] x: %d y: %d, height: %d\n", vars[x], vars[y], n);
 			break;
 		}
 		
 		// Key handling
-		//case 0xE:
-		// {
-		//	break;
-		// }
+		case 0xE:
+		{
+			switch (nn)
+			{
+				// Skips the next instruction if the key stored in VX(only consider the lowest nibble) is 
+				// pressed (usually the next instruction is a jump to skip a code block).
+				case 0x9E:
+				{
+					uint16_t mask = 1 << vars[x];
+					if (keys & mask)
+						PC += 2;
+
+					break;
+				}
+
+				// Skips the next instruction if the key stored in VX(only consider the lowest nibble) is 
+				// not pressed (usually the next instruction is a jump to skip a code block).
+				case 0xA1:
+				{
+					uint16_t mask = 1 << vars[x];
+					if (!(keys & mask))
+						PC += 2;
+
+					break;
+				}
+
+				default:
+				{
+					printf("*** UNKNOWN CODE: %02X\n", opcode);
+					break;
+				}
+			}
+
+			break;
+		}
 
 		case 0xF:
 		{
 			switch (nn)
 			{
+				// Sets VX to the value of the delay timer.
+				case 0x07:
+				{
+					vars[x] = delayTimer;
+					break;
+				}
+
+				// A key press is awaited, and then stored in VX (blocking operation, all instruction halted 
+				// until next key event, delay and sound timers should continue processing).
+				case 0x0A:
+				{
+					if (!keys)
+						PC -= 2;
+					else
+						vars[x] = countr_zero(keys);
+					break;
+				}
+
 				// Sets the delay timer to VX.
-				//case 0x15:
-				//{
-				//	break;
-				//}
+				case 0x15:
+				{
+					delayTimer = vars[x];
+					break;
+				}
 
 				// Sets the sound timer to VX.
-				//case 0x18:
-				//{
-				//	break;
-				//}
+				case 0x18:
+				{
+					soundTimer = vars[x];
+					break;
+				}
 			
 				// Adds VX to I. VF is not affected
 				case 0x1E:
