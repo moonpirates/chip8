@@ -175,7 +175,11 @@ void Emulator::HandleTimers()
 		delayTimer--;
 
 	if (soundTimer > 0)
+	{
 		soundTimer--;
+		if (soundTimer == 0)
+			sound->StopBeep();
+	}
 
 	nextTimerDecrementTime = SDL_GetTicks() + (1000.f / TIMER_DECREMENT_FREQUENCY);
 }
@@ -511,6 +515,10 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 				case 0x18:
 				{
 					soundTimer = vars[x];
+					
+					if (soundTimer > 0 && !sound->IsPlaying())
+						sound->StartBeep();
+					
 					break;
 				}
 			
