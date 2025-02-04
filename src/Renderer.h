@@ -14,7 +14,6 @@ class Renderer
 public:
 	Renderer(Window* window);
 
-
 	bool Init();
 	void Shutdown();
 	void Render();
@@ -34,7 +33,7 @@ private:
 	SDL_Renderer* sdlRenderer = nullptr;
 	vector<vector<bool>> screenBuffer; //TODO find a smarter way to read the pixel data from SDL as this is redundant information, https://youtu.be/EW1zXX89pfM?t=5109
 	bool initialized = false;
-	bool redraw = false;
+	bool redraw = true; // True because we want to draw one frame to clear the screen
 	float nextRenderTime = 0.f;
 };
 

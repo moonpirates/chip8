@@ -1,32 +1,28 @@
 #pragma once
-#include "SDL3\SDL_audio.h"
+#include "SDL3/SDL.h"
+#include "SDL3/SDL_audio.h"
 
 struct SDL_AudioStream;
 
 class Sound
 {
 public:
-	Sound();
-
 	bool Init();
 	void Shutdown();
+	void StartBeep(uint16_t ms) { audioEndTime = SDL_GetTicks() + ms; }
 	
 	static void AudioCallback(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount);
-	void StartBeep() { isPlaying = true; }
-	void StopBeep() { isPlaying = false; }
-	bool IsPlaying() const { return isPlaying;  }
 
 private:
 	static constexpr float BEEP_AMPLITUDE = 0.2f;
-	static constexpr float BEEP_FREQUENCY = 880.f;
-	static constexpr float ATTACK_DECAY_DURATION_MS = 0.f;
+	static const int BEEP_FREQUENCY = 880;
 	static const int FREQUENCY = 44100;
 
-	SDL_AudioDeviceID deviceID;
+	SDL_AudioDeviceID deviceID = 0;
+	SDL_AudioStream* stream = nullptr;
 	float samples[FREQUENCY] = {};
-	float v;
-	bool isPlaying;
-	float volume;
-	uint64_t previousTick;
+	uint32_t phase = 0;
+	float volume = 0.f;
+	uint64_t audioEndTime = 0;
 };
 

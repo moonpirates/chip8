@@ -56,9 +56,6 @@ bool Emulator::Init()
 
 bool Emulator::Run()
 {
-	if (!HandleEvents())
-		return false;
-
 	HandleKeyboard();
 	HandleTimers();
 
@@ -79,10 +76,10 @@ void Emulator::Shutdown()
 
 bool Emulator::LoadROM()
 {
-	cout << "Loading 'ROM/" << romPath << "'" << endl;
+	cout << "Loading '" << romPath << "'" << endl;
 
 	// Open file
-	ifstream file("ROM/" + romPath, ios::binary | ios::ate);
+	ifstream file(romPath, ios::binary | ios::ate);
 	if (!file)
 	{
 		cerr << "Could not open 'ROM/" << romPath << "'" << endl;
@@ -112,7 +109,6 @@ bool Emulator::LoadROM()
 	return true;
 }
 
-
 void Emulator::LoadFont()
 {
 	const vector<uint8_t> FONT_DATA
@@ -136,21 +132,6 @@ void Emulator::LoadFont()
 	};
 
 	memcpy(&memory[FONT_START], FONT_DATA.data(), FONT_DATA.size());
-}
-
-bool Emulator::HandleEvents()
-{
-	SDL_Event e;
-	if (SDL_PollEvent(&e))
-	{
-		if (e.type == SDL_EVENT_QUIT)
-			return false;
-
-		if (e.type == SDL_EVENT_KEY_UP && e.key.key == SDLK_ESCAPE)
-			return false;
-	}
-
-	return true;
 }
 
 void Emulator::HandleKeyboard()
@@ -177,8 +158,8 @@ void Emulator::HandleTimers()
 	if (soundTimer > 0)
 	{
 		soundTimer--;
-		if (soundTimer == 0)
-			sound->StopBeep();
+		//if (soundTimer == 0)
+		//	sound->StopBeep();
 	}
 
 	nextTimerDecrementTime = SDL_GetTicks() + (1000.f / TIMER_DECREMENT_FREQUENCY);
@@ -515,10 +496,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 				case 0x18:
 				{
 					soundTimer = vars[x];
-					
-					if (soundTimer > 0 && !sound->IsPlaying())
-						sound->StartBeep();
-					
+					sound->StartBeep(vars[x] * (1000 / TIMER_DECREMENT_FREQUENCY));
 					break;
 				}
 			

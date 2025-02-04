@@ -1,14 +1,10 @@
 #include "Sound.h"
-#include <numbers>
-#include <cmath>
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_audio.h"
+#include <numbers>
+#include <cmath>
 
 using namespace std;
-
-Sound::Sound() : deviceID(0), v(0.f), isPlaying(false), volume(0.f), previousTick(0)
-{
-}
 
 bool Sound::Init()
 {
@@ -17,7 +13,7 @@ bool Sound::Init()
 	
 	// Open specs
 	const SDL_AudioSpec spec = { SDL_AUDIO_F32, 1, FREQUENCY };
-	SDL_AudioStream* stream = SDL_OpenAudioDeviceStream(deviceID, &spec, AudioCallback, this);
+	stream = SDL_OpenAudioDeviceStream(deviceID, &spec, AudioCallback, this);
 
 	// Quirk of SDL, starts in paused mode
 	SDL_ResumeAudioStreamDevice(stream);
@@ -33,6 +29,7 @@ bool Sound::Init()
 
 void Sound::Shutdown()
 {
+	SDL_DestroyAudioStream(stream);
 	SDL_CloseAudioDevice(deviceID);
 }
 
@@ -41,33 +38,29 @@ void Sound::AudioCallback(void* userdata, SDL_AudioStream* stream, int additiona
 	// additional_amount 	the amount of data, in bytes, that is needed right now.
 	// total_amount 		the total amount of data requested, in bytes, that is requested or available.
 	Sound* sound = static_cast<Sound*>(userdata);
+
+	// Determine whether beep gate should be open
+	bool shouldBePlaying = SDL_GetTicks() < sound->audioEndTime;
 	
-	// Calculate step size in volume
-	const uint64_t currentTick = SDL_GetTicks();
-	const float deltaTime = (currentTick - sound->previousTick);
-	const float step = deltaTime / ATTACK_DECAY_DURATION_MS * BEEP_AMPLITUDE;
-
-	// Either attack or decay
-	if (sound->isPlaying && sound->volume < BEEP_AMPLITUDE)
-		sound->volume = min(sound->volume + step, BEEP_AMPLITUDE);
-	else if (!sound->isPlaying && sound->volume > 0.f)
-		sound->volume = max(sound->volume - step, 0.f);
-
-	//cout << "vol: " << sound->volume << ",   \ttime: " << (currentTick / 1000.f) << ",\tdeltaTime: " << deltaTime << ",\tstep: " << step << endl;
-
 	// Amount arguments are in bytes
 	const int numFloats = additional_amount / sizeof(float);
+
+	// Generate sine samples
 	for (size_t i = 0; i < numFloats; i++)
 	{
-		// https://gist.github.com/bashkirtsevich/c0c1992a1cdcc57add02b6c7cc783ab1
-		sound->samples[i] = std::sin(sound->v * 2 * numbers::pi / sound->FREQUENCY) * sound->volume;
-		sound->v += BEEP_FREQUENCY;
+		// Short attack/decay to prevent pops from off axis sines
+		const float ATTACK_DECAY_STEP_SIZE = 0.01f;
+		if (shouldBePlaying && sound->volume < 1.f)
+			sound->volume = std::min(sound->volume + ATTACK_DECAY_STEP_SIZE, 1.f);
+		else if (!shouldBePlaying && sound->volume > 0.f)
+			sound->volume = std::max(sound->volume - ATTACK_DECAY_STEP_SIZE, 0.f);
 
-		//TODO investigate weird pitch shift around 10 secs
+		// Generate sine multiplied by the desired amplitude and volume modifier
+		sound->samples[i] = std::sin(sound->phase * 2 * numbers::pi / sound->FREQUENCY) * BEEP_AMPLITUDE * sound->volume;
+		sound->phase += BEEP_FREQUENCY;
 	}
-
+	
 	// Put generated waveform into stream
 	SDL_PutAudioStreamData(stream, &sound->samples, additional_amount);
-
-	sound->previousTick = currentTick;
 }
+

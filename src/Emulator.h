@@ -31,7 +31,6 @@ private:
 	void LoadFont();
 
 	// Core loop
-	bool HandleEvents();
 	void HandleKeyboard();
 	void HandleTimers();
 	Opcode Fetch();
