@@ -36,7 +36,6 @@ void Renderer::Shutdown()
 
 void Renderer::Render()
 {
-	//TODO only call after resize event, see https://stackoverflow.com/a/40693139/9763789
 	UpdateRenderScale();
 
 	if (SDL_GetTicks() < nextRenderTime)

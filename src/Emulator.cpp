@@ -139,7 +139,6 @@ void Emulator::HandleKeyboard()
 	const bool* keyState = SDL_GetKeyboardState(nullptr);
 	keys = 0;
 	
-	//TODO ensure this translates to other keyboard layouts like AZERTY
 	for (size_t i = 0; i < KEY_MAP.size(); i++)
 	{
 		SDL_Scancode scancode = KEY_MAP[i];
@@ -330,8 +329,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 				case 0x5:
 				{
 					// Underflow handling
-					vars[0xF] = vars[x] >= vars[y] ? 1 : 0; // TODO equation would already lead to 0 or 1?
-
+					vars[0xF] = vars[x] >= vars[y];
 					vars[x] = vars[x] - vars[y];
 					break;
 				}
@@ -342,7 +340,6 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 #ifdef CHIP8_ORIGINAL
 					vars[x] = vars[y];
 #endif
-					// TODO double check if this is correct
 					uint8_t shiftedBit = vars[x] & 0x1;
 					vars[x] = vars[x] >> 1;
 					vars[0xF] = shiftedBit;
@@ -353,8 +350,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 				// (i.e. VF set to 1 if VY >= VX).
 				case 0x7:
 				{
-					vars[0xF] = vars[y] >= vars[x] ? 1 : 0; // TODO equation would already lead to 0 or 1?
-
+					vars[0xF] = vars[y] >= vars[x];
 					vars[x] = vars[y] - vars[x];
 				}
 					break;
@@ -366,7 +362,6 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 #ifdef CHIP8_ORIGINAL
 					vars[x] = vars[y];
 #endif
-					// TODO double check if this is correct
 					uint8_t shiftedBit = vars[x] >> 7;
 					vars[x] = vars[x] << 1;
 					vars[0xF] = shiftedBit;
