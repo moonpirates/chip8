@@ -11,15 +11,12 @@ bool Window::Init()
 	}
 
 	// Init window
-	sdlWindow = SDL_CreateWindow("CHIP-8 Emulator", CANVAS_WIDTH, CANVAS_HEIGHT, SDL_WINDOW_RESIZABLE);
+	sdlWindow = SDL_CreateWindow("CHIP-8 Emulator", CANVAS_WIDTH * INITIAL_SCALE_FACTOR, CANVAS_HEIGHT * INITIAL_SCALE_FACTOR, SDL_WINDOW_RESIZABLE);
 	if (sdlWindow == nullptr)
 	{
 		SDL_Log("Could not create window: %s", SDL_GetError());
 		return false;
 	}
-
-	// Set an initial window size
-	SDL_SetWindowSize(sdlWindow, CANVAS_WIDTH * INITIAL_SCALE_FACTOR, CANVAS_HEIGHT * INITIAL_SCALE_FACTOR);
 
 	return true;
 }

@@ -117,8 +117,8 @@ bool Chip8::HandleEvents()
 
 		if (e.type == SDL_EVENT_DROP_FILE)
 		{
-			romPath = e.drop.data;
 			Shutdown();
+			romPath = e.drop.data;
 			InitROM();
 			hasShutDown = false;
 		}
