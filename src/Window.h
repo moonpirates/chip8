@@ -18,6 +18,6 @@ private:
 
 	const int CANVAS_WIDTH = 64;
 	const int CANVAS_HEIGHT = 32;
-	const int INITIAL_SCALE_FACTOR = 10;
+	const int INITIAL_SCALE_FACTOR = 15;
 };
 

@@ -95,6 +95,14 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>"$(ProjectDir)shaders\compile.bat"</Command>
+      <Message>Pre build compile shaders</Message>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>del "$(IntDir)Window.obj"</Command>
+      <Message>Post build copy</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -125,6 +133,14 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>"$(ProjectDir)shaders\compile.bat"</Command>
+      <Message>Pre build compile shaders</Message>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>del "$(IntDir)Window.obj"</Command>
+      <Message>Post build copy</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>

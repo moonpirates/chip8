@@ -64,7 +64,7 @@ void Renderer::Render()
 		return;
 
 	// Render
-	if (redraw)
+	if (redraw || true)
 	{
 		//RenderBuffer();
 		//SDL_RenderPresent(sdlRenderer);
@@ -121,19 +121,18 @@ void Renderer::Render()
 				const int y = quadIndex / window->GetCanvasWidth();
 				const SDL_FPoint QUAD_UPPER_LEFT = { UPPER_LEFT.x + QUAD_SIZE.x * x, UPPER_LEFT.y - QUAD_SIZE.y * y };
 
-				const Uint8 r = ((float)x / window->GetCanvasWidth()) * 255;
-				const Uint8 g = ((float)y / window->GetCanvasHeight()) * 255;
-				const Uint8 b = 0;
-				const Uint8 a = 255;
+				const Uint8 r = screenBuffer[x][y] ?  50 : 80;
+				const Uint8 g = screenBuffer[x][y] ? 255 : 80;
+				const Uint8 b = screenBuffer[x][y] ? 102 : 80;
 
 				// TODO switch to float4 and use A as an on/off?
-				transferData[i] = { QUAD_UPPER_LEFT.x, QUAD_UPPER_LEFT.y, 0.0f, r, g, b, a }; // upper left
-				transferData[i + 1] = { QUAD_UPPER_LEFT.x + QUAD_SIZE.x, QUAD_UPPER_LEFT.y, 0.0f, r, g, b, a }; // upper right
-				transferData[i + 2] = { QUAD_UPPER_LEFT.x, QUAD_UPPER_LEFT.y - QUAD_SIZE.y, 0.0f, r, g, b, a }; // lower left
+				transferData[i] = {		QUAD_UPPER_LEFT.x,					QUAD_UPPER_LEFT.y,					0.0f,		r, g, b, 255 }; // upper left
+				transferData[i + 1] = { QUAD_UPPER_LEFT.x + QUAD_SIZE.x,	QUAD_UPPER_LEFT.y,					0.0f,		r, g, b, 255 }; // upper right
+				transferData[i + 2] = { QUAD_UPPER_LEFT.x,					QUAD_UPPER_LEFT.y - QUAD_SIZE.y,	0.0f,		r, g, b, 255 }; // lower left
 
-				transferData[i + 3] = { QUAD_UPPER_LEFT.x + QUAD_SIZE.x, QUAD_UPPER_LEFT.y, 0.0f, r, g, b, a }; // upper right
-				transferData[i + 4] = { QUAD_UPPER_LEFT.x, QUAD_UPPER_LEFT.y - QUAD_SIZE.y, 0.0f, r, g, b, a }; // lower left
-				transferData[i + 5] = { QUAD_UPPER_LEFT.x + QUAD_SIZE.x, QUAD_UPPER_LEFT.y - QUAD_SIZE.y, 0.0f, r, g, b, a }; // lower right
+				transferData[i + 3] = { QUAD_UPPER_LEFT.x + QUAD_SIZE.x,	QUAD_UPPER_LEFT.y,					0.0f,		r, g, b, 255 }; // upper right
+				transferData[i + 4] = { QUAD_UPPER_LEFT.x,					QUAD_UPPER_LEFT.y - QUAD_SIZE.y,	0.0f,		r, g, b, 255 }; // lower left
+				transferData[i + 5] = { QUAD_UPPER_LEFT.x + QUAD_SIZE.x,	QUAD_UPPER_LEFT.y - QUAD_SIZE.y,	0.0f,		r, g, b, 255 }; // lower right
 			}
 
 			SDL_UnmapGPUTransferBuffer(gpuDevice, transferBuffer);
