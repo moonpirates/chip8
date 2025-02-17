@@ -65,12 +65,12 @@ float4 main(Input Input) : SV_Target0
 		Input.Color.g *= CHANNEL_DARKEN_FACTOR;
 	}
 
-	const int LINE_HEIGHT = 6;
+	const int LINE_HEIGHT = 4;
 
-	if (x % 6 >= 3 && x % 6 <= 5)
-		y += LINE_HEIGHT / 2;
+	/*if (x % 6 >= 3 && x % 6 <= 5)
+		y += LINE_HEIGHT / 2;*/
 
-	if (y % LINE_HEIGHT == LINE_HEIGHT - 1)
+	if (y % LINE_HEIGHT == LINE_HEIGHT - 1 || y % LINE_HEIGHT == LINE_HEIGHT - 2)
 		Input.Color *= CHANNEL_DARKEN_FACTOR;
 
 	return Input.Color;

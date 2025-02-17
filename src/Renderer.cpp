@@ -10,6 +10,12 @@ typedef struct PositionColorVertex
 	Uint8 r, g, b, a;
 } PositionColorVertex;
 
+typedef struct PositionTextureVertex
+{
+	float x, y, z;
+	float u, v;
+} PositionTextureVertex;
+
 typedef struct ShaderUniform
 {
 	int windowWidth;
@@ -24,19 +30,108 @@ Renderer::Renderer(Window* window) : window(window)
 
 bool Renderer::Init()
 {
-	//sdlRenderer = SDL_CreateRenderer(window->GetSDLWindow(), nullptr);
-	//if (sdlRenderer == nullptr)
-	//{
-	//	SDL_Log("Could not create renderer: %s", SDL_GetError());
-	//	return false;
-	//}
-
 	if (!SetupDevice())
 		return false;
 
-	if (!SetupPipeline())
+	if (!SetupScenePipeline())
 		return false;
 
+	if (!SetupPostPipeline())
+		return false;
+
+	// Create texture
+	SDL_Point windowSize{};
+	SDL_GetWindowSize(window->GetSDLWindow(), &windowSize.x, &windowSize.y);
+
+	SDL_GPUTextureCreateInfo sceneTextureCreateInfo{};
+	sceneTextureCreateInfo.type = SDL_GPU_TEXTURETYPE_2D,
+	sceneTextureCreateInfo.width = windowSize.x; //TODO how does this perform when up sizing window?
+	sceneTextureCreateInfo.height = windowSize.y;
+	sceneTextureCreateInfo.layer_count_or_depth = 1;
+	sceneTextureCreateInfo.num_levels = 1;
+	sceneTextureCreateInfo.sample_count = SDL_GPU_SAMPLECOUNT_1;
+	sceneTextureCreateInfo.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+	sceneTextureCreateInfo.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
+	sceneTexture = SDL_CreateGPUTexture(gpuDevice, &sceneTextureCreateInfo);
+
+	// Create sampler
+	SDL_GPUSamplerCreateInfo samplerCreateInfo{};
+	samplerCreateInfo.min_filter = SDL_GPU_FILTER_NEAREST;
+	samplerCreateInfo.mag_filter = SDL_GPU_FILTER_NEAREST;
+	samplerCreateInfo.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
+	samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	samplerCreateInfo.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	sampler = SDL_CreateGPUSampler(gpuDevice, &samplerCreateInfo);
+
+	// Create vertex/index buffers
+	SDL_GPUBufferCreateInfo sceneVertexBufferCreateInfo{};
+	sceneVertexBufferCreateInfo.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
+	sceneVertexBufferCreateInfo.size = sizeof(PositionColorVertex) * NUM_VERTICES;
+	sceneVertexBuffer = SDL_CreateGPUBuffer(gpuDevice, &sceneVertexBufferCreateInfo);
+
+	SDL_GPUBufferCreateInfo postVertexBufferCreateInfo{};
+	postVertexBufferCreateInfo.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
+	postVertexBufferCreateInfo.size = sizeof(PositionTextureVertex) * 4;
+	postVertexBuffer = SDL_CreateGPUBuffer(gpuDevice, &postVertexBufferCreateInfo);
+
+	SDL_GPUBufferCreateInfo postIndexBufferCreateInfo{};
+	postIndexBufferCreateInfo.usage = SDL_GPU_BUFFERUSAGE_INDEX;
+	postIndexBufferCreateInfo.size = sizeof(Uint16) * 6;
+	postIndexBuffer = SDL_CreateGPUBuffer(gpuDevice, &postIndexBufferCreateInfo);
+
+	// Transfer static information
+	SDL_GPUTransferBufferCreateInfo transferBufferCreateInfo{};
+	transferBufferCreateInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+	transferBufferCreateInfo.size = (sizeof(PositionTextureVertex) * 4) + (sizeof(Uint16) * 6);
+	SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gpuDevice, &transferBufferCreateInfo);
+
+	PositionTextureVertex* transferData = (PositionTextureVertex*)SDL_MapGPUTransferBuffer(gpuDevice, transferBuffer, false);
+	transferData[0] = { -1,  1, 0, 0, 0 };
+	transferData[1] = {  1,  1, 0, 1, 0 };
+	transferData[2] = {  1, -1, 0, 1, 1 };
+	transferData[3] = { -1, -1, 0, 0, 1 };
+
+	Uint16* indexData = (Uint16*)&transferData[4];
+	indexData[0] = 0;
+	indexData[1] = 1;
+	indexData[2] = 2;
+	indexData[3] = 0;
+	indexData[4] = 2;
+	indexData[5] = 3;
+
+	SDL_UnmapGPUTransferBuffer(gpuDevice, transferBuffer);
+
+	SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gpuDevice);
+	SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(commandBuffer);
+	
+	SDL_GPUTransferBufferLocation vertexTransferBufferLocation{};
+	vertexTransferBufferLocation.transfer_buffer = transferBuffer;
+	vertexTransferBufferLocation.offset = 0;
+
+	SDL_GPUBufferRegion vertexBufferRegion{};
+	vertexBufferRegion.buffer = postVertexBuffer;
+	vertexBufferRegion.offset = 0;
+	vertexBufferRegion.size = sizeof(PositionTextureVertex) * 4;
+
+	SDL_UploadToGPUBuffer(copyPass, &vertexTransferBufferLocation, &vertexBufferRegion, false);
+
+	SDL_GPUTransferBufferLocation indexTransferBufferLocation{};
+	indexTransferBufferLocation.transfer_buffer = transferBuffer;
+	indexTransferBufferLocation.offset = sizeof(PositionTextureVertex) * 4;
+
+	SDL_GPUBufferRegion indexBufferRegion{};
+	indexBufferRegion.buffer = postIndexBuffer;
+	indexBufferRegion.offset = 0;
+	indexBufferRegion.size = sizeof(Uint16) * 6;
+
+	SDL_UploadToGPUBuffer(copyPass, &indexTransferBufferLocation, &indexBufferRegion, false);
+
+	SDL_EndGPUCopyPass(copyPass);
+	SDL_SubmitGPUCommandBuffer(commandBuffer);
+	SDL_ReleaseGPUTransferBuffer(gpuDevice, transferBuffer);
+
+	// Watch window resizing
 	SDL_AddEventWatch(OnWindowEvent, this);
 
 	initialized = true;
@@ -64,10 +159,9 @@ void Renderer::Render()
 		return;
 
 	// Render
-	if (redraw || true)
+	if (redraw || true) // TODO remove true
 	{
 		//RenderBuffer();
-		//SDL_RenderPresent(sdlRenderer);
 
 		SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gpuDevice);
 		if (commandBuffer == nullptr)
@@ -85,19 +179,26 @@ void Renderer::Render()
 
 		if (swapchainTexture != nullptr)
 		{
-			SDL_GPUColorTargetInfo colorTargetInfo = { 0 };
-			colorTargetInfo.texture = swapchainTexture;
-			colorTargetInfo.clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
-			colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
-			colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
+			SDL_GPUColorTargetInfo sceneTargetInfo = { 0 };
+			sceneTargetInfo.texture = sceneTexture;
+			sceneTargetInfo.clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			sceneTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+			sceneTargetInfo.store_op = SDL_GPU_STOREOP_STORE;			
+			
+			
+			SDL_GPUColorTargetInfo swapchainTargetInfo = { 0 };
+			swapchainTargetInfo.texture = swapchainTexture;
+			swapchainTargetInfo.clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			swapchainTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+			swapchainTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
 
 			// Bind pipeline
-			SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(commandBuffer, &colorTargetInfo, 1, nullptr);
-			SDL_BindGPUGraphicsPipeline(renderPass, gpuPipeline);
+			SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(commandBuffer, &swapchainTargetInfo, 1, nullptr);
+			SDL_BindGPUGraphicsPipeline(renderPass, scenePipeline);
 			
 			// Bind vertex buffer
 			SDL_GPUBufferBinding bufferBinding{};
-			bufferBinding.buffer = gpuVertexBuffer;
+			bufferBinding.buffer = sceneVertexBuffer;
 			bufferBinding.offset = 0;
 
 			SDL_BindGPUVertexBuffers(renderPass, 0, &bufferBinding, 1);
@@ -146,7 +247,7 @@ void Renderer::Render()
 			source.offset = 0;
 
 			SDL_GPUBufferRegion destination{};
-			destination.buffer = gpuVertexBuffer;
+			destination.buffer = sceneVertexBuffer;
 			destination.offset = 0;
 			destination.size = sizeof(PositionColorVertex) * NUM_VERTICES;
 
@@ -154,6 +255,12 @@ void Renderer::Render()
 			SDL_EndGPUCopyPass(copyPass);
 			SDL_SubmitGPUCommandBuffer(commandBuffer);
 			SDL_ReleaseGPUTransferBuffer(gpuDevice, transferBuffer);
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 			// Set fragment shader uniform
 			ShaderUniform uni{};
@@ -242,20 +349,20 @@ bool Renderer::SetupDevice()
 	return true;
 }
 
-bool Renderer::SetupPipeline()
+bool Renderer::SetupScenePipeline()
 {
 	// Setup shaders
-	SDL_GPUShader* vertexShader = LoadShader(gpuDevice, "chip8.vert", 0, 0, 0, 0);
+	SDL_GPUShader* vertexShader = LoadShader(gpuDevice, "scene.vert", 0, 0, 0, 0);
 	if (vertexShader == nullptr)
 	{
-		SDL_Log("Failed to create vertex shader.");
+		SDL_Log("Failed to create scene vertex shader.");
 		return false;
 	}	
 
-	SDL_GPUShader* fragmentShader = LoadShader(gpuDevice, "chip8.frag", 0, 1, 0, 0);
+	SDL_GPUShader* fragmentShader = LoadShader(gpuDevice, "scene.frag", 0, 1, 0, 0);
 	if (fragmentShader == nullptr)
 	{
-		SDL_Log("Failed to create vertex shader.");
+		SDL_Log("Failed to create scene fragment shader.");
 		return false;
 	}
 
@@ -288,7 +395,97 @@ bool Renderer::SetupPipeline()
 
 	// Set up target info
 	SDL_GPUColorTargetDescription colorTargetDescriptions[1]{};
+	colorTargetDescriptions[0].format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+
+	SDL_GPUGraphicsPipelineTargetInfo targetInfo{};
+	targetInfo.num_color_targets = 1;
+	targetInfo.color_target_descriptions = colorTargetDescriptions;
+
+	SDL_GPURasterizerState rasterizerState{};
+	rasterizerState.cull_mode = SDL_GPU_CULLMODE_NONE;
+	rasterizerState.fill_mode = SDL_GPU_FILLMODE_FILL;
+	rasterizerState.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
+
+	// Set up actual graphics pipeline
+	SDL_GPUGraphicsPipelineCreateInfo pipelineCreateInfo{};
+	pipelineCreateInfo.vertex_shader = vertexShader;
+	pipelineCreateInfo.fragment_shader = fragmentShader;
+	pipelineCreateInfo.vertex_input_state = vertexInputState;
+	pipelineCreateInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+	pipelineCreateInfo.target_info = targetInfo;
+	pipelineCreateInfo.rasterizer_state = rasterizerState;
+
+	// Create graphics pipeline
+	scenePipeline = SDL_CreateGPUGraphicsPipeline(gpuDevice, &pipelineCreateInfo);
+	if (scenePipeline == nullptr)
+	{
+		SDL_Log("Failed to create scene pipeline.");
+		return false;
+	}
+
+	SDL_ReleaseGPUShader(gpuDevice, vertexShader);
+	SDL_ReleaseGPUShader(gpuDevice, fragmentShader);
+
+	return true;
+}
+
+bool Renderer::SetupPostPipeline()
+{
+	// Setup shaders
+	SDL_GPUShader* vertexShader = LoadShader(gpuDevice, "post.vert", 0, 0, 0, 0);
+	if (vertexShader == nullptr)
+	{
+		SDL_Log("Failed to create post vertex shader.");
+		return false;
+	}	
+
+	SDL_GPUShader* fragmentShader = LoadShader(gpuDevice, "post.frag", 0, 1, 0, 0);
+	if (fragmentShader == nullptr)
+	{
+		SDL_Log("Failed to create post fragment shader.");
+		return false;
+	}
+
+	// Setup vertex info so it matches PositionTextureVertex
+	SDL_GPUVertexBufferDescription vertexBufferDescriptions[1]{};
+	vertexBufferDescriptions[0].slot = 0;
+	vertexBufferDescriptions[0].input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+	vertexBufferDescriptions[0].instance_step_rate = 0;
+	vertexBufferDescriptions[0].pitch = sizeof(PositionTextureVertex);
+
+	SDL_GPUVertexAttribute vertexAttributes[2]{};
+
+	// Vertex position
+	vertexAttributes[0].buffer_slot = 0;
+	vertexAttributes[0].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+	vertexAttributes[0].location = 0;
+	vertexAttributes[0].offset = 0;
+
+	// Vertex UVs
+	vertexAttributes[1].buffer_slot = 0;
+	vertexAttributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
+	vertexAttributes[1].location = 1;
+	vertexAttributes[1].offset = sizeof(float) * 3; // Offset by the float3 of position
+
+	SDL_GPUVertexInputState vertexInputState{};
+	vertexInputState.num_vertex_buffers = 1;
+	vertexInputState.vertex_buffer_descriptions = vertexBufferDescriptions;
+	vertexInputState.num_vertex_attributes = 2;
+	vertexInputState.vertex_attributes = vertexAttributes;
+
+	// Set up target info
+	SDL_GPUColorTargetBlendState colorTargetBlendState{};
+	colorTargetBlendState.enable_blend = true;
+	colorTargetBlendState.src_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
+	colorTargetBlendState.dst_color_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	colorTargetBlendState.color_blend_op = SDL_GPU_BLENDOP_ADD;
+	colorTargetBlendState.src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE;
+	colorTargetBlendState.dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	colorTargetBlendState.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
+
+	SDL_GPUColorTargetDescription colorTargetDescriptions[1]{};
 	colorTargetDescriptions[0].format = SDL_GetGPUSwapchainTextureFormat(gpuDevice, window->GetSDLWindow());
+	colorTargetDescriptions[0].blend_state = colorTargetBlendState;
 
 	SDL_GPUGraphicsPipelineTargetInfo targetInfo{};
 	targetInfo.num_color_targets = 1;
@@ -303,22 +500,15 @@ bool Renderer::SetupPipeline()
 	pipelineCreateInfo.target_info = targetInfo;
 
 	// Create graphics pipeline
-	gpuPipeline = SDL_CreateGPUGraphicsPipeline(gpuDevice, &pipelineCreateInfo);
-	if (gpuPipeline == nullptr)
+	postPipeline = SDL_CreateGPUGraphicsPipeline(gpuDevice, &pipelineCreateInfo);
+	if (postPipeline == nullptr)
 	{
-		SDL_Log("Failed to create pipeline.");
+		SDL_Log("Failed to create post pipeline.");
 		return false;
 	}
 
 	SDL_ReleaseGPUShader(gpuDevice, vertexShader);
 	SDL_ReleaseGPUShader(gpuDevice, fragmentShader);
-
-	// Create vertex buffer
-	SDL_GPUBufferCreateInfo bufferCreateInfo{};
-	bufferCreateInfo.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
-	bufferCreateInfo.size = sizeof(PositionColorVertex) * NUM_VERTICES;
-
-	gpuVertexBuffer = SDL_CreateGPUBuffer(gpuDevice, &bufferCreateInfo);
 
 	return true;
 }
