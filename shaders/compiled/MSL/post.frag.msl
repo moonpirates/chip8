@@ -3,12 +3,6 @@
 
 using namespace metal;
 
-struct type_UniformBlock
-{
-    uint canvasWidth;
-    uint canvasHeight;
-};
-
 struct main0_out
 {
     float4 out_var_SV_Target0 [[color(0)]];
@@ -16,113 +10,13 @@ struct main0_out
 
 struct main0_in
 {
-    float4 in_var_TEXCOORD0 [[user(locn0)]];
+    float2 in_var_TEXCOORD0 [[user(locn0)]];
 };
 
-fragment main0_out main0(main0_in in [[stage_in]], constant type_UniformBlock& UniformBlock [[buffer(0)]], float4 gl_FragCoord [[position]])
+fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> ColorTexture [[texture(0)]], sampler ColorSampler [[sampler(0)]])
 {
     main0_out out = {};
-    float4 _140;
-    do
-    {
-        float2 _56 = (float2(gl_FragCoord.x / float(UniformBlock.canvasWidth), 1.0 - (gl_FragCoord.y / float(UniformBlock.canvasHeight))) * 2.0) - float2(1.0);
-        float2 _58 = _56.yx * 0.1500000059604644775390625;
-        float2 _63 = ((_56 + ((_56 * _58) * _58)) * 0.5) + float2(0.5);
-        float _64 = _63.x;
-        bool _70;
-        if (!(_64 < 0.0))
-        {
-            _70 = _64 >= 1.0;
-        }
-        else
-        {
-            _70 = true;
-        }
-        bool _76;
-        if (!_70)
-        {
-            _76 = _63.y < 0.0;
-        }
-        else
-        {
-            _76 = true;
-        }
-        bool _82;
-        if (!_76)
-        {
-            _82 = _63.y >= 1.0;
-        }
-        else
-        {
-            _82 = true;
-        }
-        if (_82)
-        {
-            _140 = float4(0.0, 0.0, 0.0, 1.0);
-            break;
-        }
-        float _87 = _63.y;
-        float4 _93 = in.in_var_TEXCOORD0 * (powr(((_64 * (1.0 - _64)) * _87) * (1.0 - _87), 0.25) * 2.5);
-        int _96 = int(gl_FragCoord.x) - 3 * (int(gl_FragCoord.x) / 3);
-        float4 _128;
-        if (_96 == 0)
-        {
-            float4 _103 = _93;
-            _103.y = _93.y * 0.60000002384185791015625;
-            _103.z = _93.z * 0.60000002384185791015625;
-            _128 = _103;
-        }
-        else
-        {
-            float4 _127;
-            if (_96 == 1)
-            {
-                float4 _113 = _93;
-                _113.x = _93.x * 0.60000002384185791015625;
-                _113.z = _93.z * 0.60000002384185791015625;
-                _127 = _113;
-            }
-            else
-            {
-                float4 _126;
-                if (_96 == 2)
-                {
-                    float4 _122 = _93;
-                    _122.x = _93.x * 0.60000002384185791015625;
-                    _122.y = _93.y * 0.60000002384185791015625;
-                    _126 = _122;
-                }
-                else
-                {
-                    _126 = _93;
-                }
-                _127 = _126;
-            }
-            _128 = _127;
-        }
-        int _129 = int(gl_FragCoord.y) - 4 * (int(gl_FragCoord.y) / 4);
-        bool _135;
-        if (!(_129 == 3))
-        {
-            _135 = _129 == 2;
-        }
-        else
-        {
-            _135 = true;
-        }
-        float4 _139;
-        if (_135)
-        {
-            _139 = _128 * 0.60000002384185791015625;
-        }
-        else
-        {
-            _139 = _128;
-        }
-        _140 = _139;
-        break;
-    } while(false);
-    out.out_var_SV_Target0 = _140;
+    out.out_var_SV_Target0 = ColorTexture.sample(ColorSampler, (in.in_var_TEXCOORD0 * 2.0));
     return out;
 }
 

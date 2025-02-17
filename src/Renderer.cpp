@@ -59,9 +59,9 @@ bool Renderer::Init()
 	samplerCreateInfo.min_filter = SDL_GPU_FILTER_NEAREST;
 	samplerCreateInfo.mag_filter = SDL_GPU_FILTER_NEAREST;
 	samplerCreateInfo.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
-	samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-	samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
-	samplerCreateInfo.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_REPEAT;
+	samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+	samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+	samplerCreateInfo.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
 	sampler = SDL_CreateGPUSampler(gpuDevice, &samplerCreateInfo);
 
 	// Create vertex/index buffers
@@ -179,21 +179,16 @@ void Renderer::Render()
 
 		if (swapchainTexture != nullptr)
 		{
+			////////////////////////////// SCENE RENDER PASS //////////////////////////////
+			
 			SDL_GPUColorTargetInfo sceneTargetInfo = { 0 };
 			sceneTargetInfo.texture = sceneTexture;
 			sceneTargetInfo.clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
 			sceneTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
 			sceneTargetInfo.store_op = SDL_GPU_STOREOP_STORE;			
-			
-			
-			SDL_GPUColorTargetInfo swapchainTargetInfo = { 0 };
-			swapchainTargetInfo.texture = swapchainTexture;
-			swapchainTargetInfo.clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
-			swapchainTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
-			swapchainTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
 
 			// Bind pipeline
-			SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(commandBuffer, &swapchainTargetInfo, 1, nullptr);
+			SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(commandBuffer, &sceneTargetInfo, 1, nullptr);
 			SDL_BindGPUGraphicsPipeline(renderPass, scenePipeline);
 			
 			// Bind vertex buffer
@@ -239,8 +234,8 @@ void Renderer::Render()
 			SDL_UnmapGPUTransferBuffer(gpuDevice, transferBuffer);
 
 			// Upload to vertex buffer
-			SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gpuDevice);
-			SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(commandBuffer);
+			SDL_GPUCommandBuffer* uploadCommandBuffer = SDL_AcquireGPUCommandBuffer(gpuDevice);
+			SDL_GPUCopyPass* copyPass = SDL_BeginGPUCopyPass(uploadCommandBuffer);
 			
 			SDL_GPUTransferBufferLocation source{};
 			source.transfer_buffer = transferBuffer;
@@ -253,23 +248,48 @@ void Renderer::Render()
 
 			SDL_UploadToGPUBuffer(copyPass, &source, &destination, false);
 			SDL_EndGPUCopyPass(copyPass);
-			SDL_SubmitGPUCommandBuffer(commandBuffer);
+			SDL_SubmitGPUCommandBuffer(uploadCommandBuffer);
 			SDL_ReleaseGPUTransferBuffer(gpuDevice, transferBuffer);
-
-			/////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-			/////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-			// Set fragment shader uniform
-			ShaderUniform uni{};
-			SDL_GetWindowSize(window->GetSDLWindow(), &uni.windowWidth, &uni.windowHeight);
-			SDL_PushGPUFragmentUniformData(commandBuffer, 0, &uni, sizeof(ShaderUniform));
 
 			// Draw
 			SDL_DrawGPUPrimitives(renderPass, NUM_VERTICES, 1, 0, 0);
 			SDL_EndGPURenderPass(renderPass);
+
+			////////////////////////////// POST RENDER PASS //////////////////////////////
+
+			SDL_GPUColorTargetInfo swapchainTargetInfo = { 0 };
+			swapchainTargetInfo.texture = swapchainTexture;
+			swapchainTargetInfo.clear_color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			swapchainTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+			swapchainTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
+
+			renderPass = SDL_BeginGPURenderPass(commandBuffer, &swapchainTargetInfo, 1, nullptr);
+			SDL_BindGPUGraphicsPipeline(renderPass, postPipeline);
+			
+			SDL_GPUBufferBinding vertexBufferBinding{};
+			vertexBufferBinding.buffer = postVertexBuffer;
+			vertexBufferBinding.offset = 0;
+			SDL_BindGPUVertexBuffers(renderPass, 0, &vertexBufferBinding, 1);
+
+			SDL_GPUBufferBinding indexBufferBinding{};
+			indexBufferBinding.buffer = postIndexBuffer;
+			indexBufferBinding.offset = 0;
+			SDL_BindGPUIndexBuffer(renderPass, &indexBufferBinding, SDL_GPU_INDEXELEMENTSIZE_16BIT);
+
+			SDL_GPUTextureSamplerBinding textureSamplerBindings[1]{};
+			textureSamplerBindings[0].texture = sceneTexture;
+			textureSamplerBindings[0].sampler = sampler;
+			SDL_BindGPUFragmentSamplers(renderPass, 0, textureSamplerBindings, 1);
+			SDL_DrawGPUIndexedPrimitives(renderPass, 6, 1, 0, 0, 0);
+			SDL_EndGPURenderPass(renderPass);
+
+			//////////////////////////////////////////////////////////////////////////////
+
+			// Set fragment shader uniform
+			//ShaderUniform uni{};
+			//SDL_GetWindowSize(window->GetSDLWindow(), &uni.windowWidth, &uni.windowHeight);
+			//SDL_PushGPUFragmentUniformData(commandBuffer, 0, &uni, sizeof(ShaderUniform));
+
 		}
 
 		SDL_SubmitGPUCommandBuffer(commandBuffer);
@@ -359,7 +379,7 @@ bool Renderer::SetupScenePipeline()
 		return false;
 	}	
 
-	SDL_GPUShader* fragmentShader = LoadShader(gpuDevice, "scene.frag", 0, 1, 0, 0);
+	SDL_GPUShader* fragmentShader = LoadShader(gpuDevice, "scene.frag", 0, 1, 0, 0); //TODO remove uniform?
 	if (fragmentShader == nullptr)
 	{
 		SDL_Log("Failed to create scene fragment shader.");
@@ -439,7 +459,7 @@ bool Renderer::SetupPostPipeline()
 		return false;
 	}	
 
-	SDL_GPUShader* fragmentShader = LoadShader(gpuDevice, "post.frag", 0, 1, 0, 0);
+	SDL_GPUShader* fragmentShader = LoadShader(gpuDevice, "post.frag", 1, 1, 0, 0);
 	if (fragmentShader == nullptr)
 	{
 		SDL_Log("Failed to create post fragment shader.");
