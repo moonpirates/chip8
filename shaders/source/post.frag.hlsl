@@ -3,6 +3,14 @@
 #define BG_COLOR float4(0.2, 0.2, 0.2, 1.0)
 #define MARGIN float2(0.05, 0.05)
 #define CURVATURE 5.0
+#define BLUR_SIZE float2(2.0, 2.0)
+#define BLOOM_WEIGHT 0.75
+#define BLOOM_SIZE float2(10.0, 10.0)
+#define SCANLINE_FREQUENCY 0.18
+#define SUB_PIXEL_STRENGTH 0.65
+#define LEVELS_CURVE_STRENGTH 1.7
+#define VIGNETTE_MAG 0.4 
+#define VIGNETTE_MULTIPLIER 1.5
 
 cbuffer UniformBlock : register(b0, space3)
 {
@@ -12,39 +20,19 @@ cbuffer UniformBlock : register(b0, space3)
 Texture2D ColorTexture : register(t0, space2);
 SamplerState ColorSampler : register(s0, space2);
 
-
-
-// float3 bloom(float2 uv)
-// {
-	
-// }
-//#define BLUR_SIZE 10.0
-//#define BLUR_QUALITY 4.0
-
-float luminance(float3 rgb)
-{
-	const float3 W = float3(0.2125, 0.7154, 0.0721);
-	return dot(rgb, W);
-}
-
-// float sampleValue(float2 uv, Texture2D ColorTexture, SamplerState ColorSampler)
-// {
-// 	return ColorTexture.Sample(ColorSampler, uv).r;
-// }
-
 float3 sampleTexture(float2 uv, Texture2D ColorTexture, SamplerState ColorSampler)
 {
-	return lerp(BG_COLOR, FG_COLOR, ColorTexture.Sample(ColorSampler, uv).r);
+	return lerp(BG_COLOR, FG_COLOR, ColorTexture.Sample(ColorSampler, uv).r).rgb;
 }
 
 float3 boxBlur(float2 uv, float2 texelSize, float2 blurSize, Texture2D ColorTexture, SamplerState ColorSampler)
 {
 	const float2 TEXEL_BLUR_SIZE = blurSize * texelSize;
-	const float2 originalUV = uv - TEXEL_BLUR_SIZE;
+	const float2 ORIGINAL_UV = uv - TEXEL_BLUR_SIZE;
 	float numSamples = 0.0;
 	float3 returnColor = float3(0.0, 0.0, 0.0);
 
-	for (uv.y = originalUV.y; uv.y < originalUV.y + TEXEL_BLUR_SIZE.y * 2.0; uv.y += texelSize.y) // use quality for step size
+	for (uv.y = ORIGINAL_UV.y; uv.y < ORIGINAL_UV.y + TEXEL_BLUR_SIZE.y * 2.0; uv.y += texelSize.y)
 	{
 		if (uv.y < 0.0)
 			continue;
@@ -52,7 +40,7 @@ float3 boxBlur(float2 uv, float2 texelSize, float2 blurSize, Texture2D ColorText
 		if (uv.y >= 1.0)
 			break;
 
-		for (uv.x = originalUV.x; uv.x < originalUV.x + TEXEL_BLUR_SIZE.x * 2.0; uv.x += texelSize.x) // use quality for step size
+		for (uv.x = ORIGINAL_UV.x; uv.x < ORIGINAL_UV.x + TEXEL_BLUR_SIZE.x * 2.0; uv.x += texelSize.x)
 		{
 			if (uv.x < 0.0)
 				continue;
@@ -60,7 +48,7 @@ float3 boxBlur(float2 uv, float2 texelSize, float2 blurSize, Texture2D ColorText
 			if (uv.x >= 1.0)
 				break;
 
-			returnColor += sampleTexture(uv, ColorTexture, ColorSampler);// distance from center laten aflopen? fake gaus?
+			returnColor += sampleTexture(uv, ColorTexture, ColorSampler);
 			numSamples++;
 		}
 	}
@@ -68,16 +56,11 @@ float3 boxBlur(float2 uv, float2 texelSize, float2 blurSize, Texture2D ColorText
 	return returnColor / numSamples;
 }
 
-float smoothSquareWave(float t, float freq, float smoothness) 
-{
-	return tanh(smoothness * sin(2.0 * PI * freq * t));
-}
-
 float4 main(float2 uv : TEXCOORD0) : SV_Target0
 {
 	const float2 ORIGINAL_UV = uv;
 	const float2 TEXEL_SIZE = 1.0 / windowSize;
-	const int2 pxPos = uv * windowSize;
+	const int2 PX_POS = uv * windowSize;
 
 	// Curvature
 	uv = uv * 2.0 - 1.0;
@@ -98,11 +81,7 @@ float4 main(float2 uv : TEXCOORD0) : SV_Target0
 	{
 		uv.x = (uv.x - MARGIN.x) / (1.0 - MARGIN.x * 2.0);
 		uv.y = (uv.y - MARGIN.y) / (1.0 - MARGIN.y * 2.0);
-		
-		const float2 BLUR_SIZE = float2(2.0, 2.0);
-		const float BLOOM_WEIGHT = 0.75;
-		const float2 BLOOM_SIZE = float2(15.0, 10.0);
-		
+				
 		float3 originalValue = boxBlur(uv, TEXEL_SIZE, BLUR_SIZE, ColorTexture, ColorSampler);
 		float3 bloomValue = boxBlur(uv, TEXEL_SIZE, BLOOM_SIZE, ColorTexture, ColorSampler) * BLOOM_WEIGHT;
 		float3 mix = max(originalValue, bloomValue);
@@ -110,54 +89,42 @@ float4 main(float2 uv : TEXCOORD0) : SV_Target0
 		color = float4(mix.r, mix.g, mix.b, 1.0);
 	}
 
-	//color = float4(1,1,1,1);
+	// Scanlines
+	float scanline = cos(PX_POS.y * PI * 2.0 * SCANLINE_FREQUENCY);
+	scanline = (scanline + 1.0) / 2.0; // move from [-1..1] to [0..1]
+	scanline *= 2.0; // Oversaturate so we get more whites in the scan lines
+	scanline = saturate(scanline); // clamp
+	scanline = (scanline / 4) + 0.75; // move to [0.75..1.0]
+	color *= scanline;
 
-	if (true)
+	// Sub pixels
+	float xMod = PX_POS.x % 3;
+	const float RGB_FACTOR = 1.0 - SUB_PIXEL_STRENGTH;
+	if (xMod == 0)
 	{
-		// Scanlines
-		float freq = 0.18;
-		float scanline = cos(pxPos.y * PI * 2.0 * freq);
-		scanline = (scanline + 1.0) / 2.0; // move from [-1..1] to [0..1]
-		scanline *= 2.0; // Oversaturate so we get more whites in the scanlines
-		scanline = saturate(scanline);
-		scanline /= 4;
-		scanline += 0.75;
-		color *= scanline;
-
-		float mod = pxPos.x % 3;
-		const float RGB_FACTOR = 0.65;
-
-		if (mod == 0)
-		{
-			color.g *= RGB_FACTOR;
-			color.b *= RGB_FACTOR;
-		}
-		else if (mod == 1)
-		{
-			color.r *= RGB_FACTOR;
-			color.b *= RGB_FACTOR;
-		}
-		else if (mod == 2)
-		{
-			color.r *= RGB_FACTOR;
-			color.g *= RGB_FACTOR;
-		}
+		color.g *= RGB_FACTOR;
+		color.b *= RGB_FACTOR;
+	}
+	else if (xMod == 1)
+	{
+		color.r *= RGB_FACTOR;
+		color.b *= RGB_FACTOR;
+	}
+	else if (xMod == 2)
+	{
+		color.r *= RGB_FACTOR;
+		color.g *= RGB_FACTOR;
 	}
 
-	const float CURVE_STRENGTH = 1.7;
-	color = 1.0 - pow(abs(color - 1.0), CURVE_STRENGTH);
+	// Apply curve to levels
+	color = 1.0 - pow(abs(color - 1.0), LEVELS_CURVE_STRENGTH);
 
 	// Vignette
-	float vignette = pow(ORIGINAL_UV.x * (1.0 - ORIGINAL_UV.x) * ORIGINAL_UV.y * (1.0 - ORIGINAL_UV.y), 0.25) * 2.5;
+	float2 vignetteUV = ORIGINAL_UV;
+	vignetteUV *= 1.0 - vignetteUV.yx;
+	float vignette = vignetteUV.x * vignetteUV.y * 15.0;
+	vignette = pow(vignette, VIGNETTE_MAG) * VIGNETTE_MULTIPLIER;
 	color *= vignette;
-
-
-
-
-
-	//color = float4(windowSize.x / 1000.0, windowSize.y / 1000.0, 0.0, 1.0);
-
-
 
 	return color;
 }
