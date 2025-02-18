@@ -18,8 +18,8 @@ typedef struct PositionTextureVertex
 
 typedef struct ShaderUniform
 {
-	int windowWidth;
-	int windowHeight;
+	float w;
+	float h;
 } ShaderUniform;
 
 
@@ -56,9 +56,9 @@ bool Renderer::Init()
 
 	// Create sampler
 	SDL_GPUSamplerCreateInfo samplerCreateInfo{};
-	samplerCreateInfo.min_filter = SDL_GPU_FILTER_NEAREST;
-	samplerCreateInfo.mag_filter = SDL_GPU_FILTER_NEAREST;
-	samplerCreateInfo.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
+	samplerCreateInfo.min_filter = SDL_GPU_FILTER_LINEAR;
+	samplerCreateInfo.mag_filter = SDL_GPU_FILTER_LINEAR;
+	samplerCreateInfo.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
 	samplerCreateInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
 	samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
 	samplerCreateInfo.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
@@ -217,18 +217,16 @@ void Renderer::Render()
 				const int y = quadIndex / window->GetCanvasWidth();
 				const SDL_FPoint QUAD_UPPER_LEFT = { UPPER_LEFT.x + QUAD_SIZE.x * x, UPPER_LEFT.y - QUAD_SIZE.y * y };
 
-				const Uint8 r = screenBuffer[x][y] ?  50 : 80;
-				const Uint8 g = screenBuffer[x][y] ? 255 : 80;
-				const Uint8 b = screenBuffer[x][y] ? 102 : 80;
+				const Uint8 v = screenBuffer[x][y] ?  255 : 0;
 
 				// TODO switch to float4 and use A as an on/off?
-				transferData[i] = {		QUAD_UPPER_LEFT.x,					QUAD_UPPER_LEFT.y,					0.0f,		r, g, b, 255 }; // upper left
-				transferData[i + 1] = { QUAD_UPPER_LEFT.x + QUAD_SIZE.x,	QUAD_UPPER_LEFT.y,					0.0f,		r, g, b, 255 }; // upper right
-				transferData[i + 2] = { QUAD_UPPER_LEFT.x,					QUAD_UPPER_LEFT.y - QUAD_SIZE.y,	0.0f,		r, g, b, 255 }; // lower left
+				transferData[i] = {		QUAD_UPPER_LEFT.x,					QUAD_UPPER_LEFT.y,					0.0f,		v, v, v, 255 }; // upper left
+				transferData[i + 1] = { QUAD_UPPER_LEFT.x + QUAD_SIZE.x,	QUAD_UPPER_LEFT.y,					0.0f,		v, v, v, 255 }; // upper right
+				transferData[i + 2] = { QUAD_UPPER_LEFT.x,					QUAD_UPPER_LEFT.y - QUAD_SIZE.y,	0.0f,		v, v, v, 255 }; // lower left
 
-				transferData[i + 3] = { QUAD_UPPER_LEFT.x + QUAD_SIZE.x,	QUAD_UPPER_LEFT.y,					0.0f,		r, g, b, 255 }; // upper right
-				transferData[i + 4] = { QUAD_UPPER_LEFT.x,					QUAD_UPPER_LEFT.y - QUAD_SIZE.y,	0.0f,		r, g, b, 255 }; // lower left
-				transferData[i + 5] = { QUAD_UPPER_LEFT.x + QUAD_SIZE.x,	QUAD_UPPER_LEFT.y - QUAD_SIZE.y,	0.0f,		r, g, b, 255 }; // lower right
+				transferData[i + 3] = { QUAD_UPPER_LEFT.x + QUAD_SIZE.x,	QUAD_UPPER_LEFT.y,					0.0f,		v, v, v, 255 }; // upper right
+				transferData[i + 4] = { QUAD_UPPER_LEFT.x,					QUAD_UPPER_LEFT.y - QUAD_SIZE.y,	0.0f,		v, v, v, 255 }; // lower left
+				transferData[i + 5] = { QUAD_UPPER_LEFT.x + QUAD_SIZE.x,	QUAD_UPPER_LEFT.y - QUAD_SIZE.y,	0.0f,		v, v, v, 255 }; // lower right
 			}
 
 			SDL_UnmapGPUTransferBuffer(gpuDevice, transferBuffer);
@@ -286,9 +284,10 @@ void Renderer::Render()
 			//////////////////////////////////////////////////////////////////////////////
 
 			// Set fragment shader uniform
-			//ShaderUniform uni{};
-			//SDL_GetWindowSize(window->GetSDLWindow(), &uni.windowWidth, &uni.windowHeight);
-			//SDL_PushGPUFragmentUniformData(commandBuffer, 0, &uni, sizeof(ShaderUniform));
+			SDL_Point windowSize;
+			SDL_GetWindowSize(window->GetSDLWindow(), &windowSize.x, &windowSize.y);
+			ShaderUniform uni{ windowSize.x, windowSize.y };
+			SDL_PushGPUFragmentUniformData(commandBuffer, 0, &uni, sizeof(ShaderUniform));
 
 		}
 
