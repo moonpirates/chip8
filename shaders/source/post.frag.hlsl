@@ -144,6 +144,9 @@ float4 main(float2 uv : TEXCOORD0) : SV_Target0
 		}
 	}
 
+	const float CURVE_STRENGTH = 1.7;
+	color = 1.0 - pow(abs(color - 1.0), CURVE_STRENGTH);
+
 	// Vignette
 	float vignette = pow(ORIGINAL_UV.x * (1.0 - ORIGINAL_UV.x) * ORIGINAL_UV.y * (1.0 - ORIGINAL_UV.y), 0.25) * 2.5;
 	color *= vignette;
