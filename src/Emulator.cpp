@@ -54,19 +54,19 @@ bool Emulator::Init()
 	return true;
 }
 
-bool Emulator::Run()
+void Emulator::Run()
 {
 	HandleKeyboard();
 	HandleTimers();
 
 	if (SDL_GetTicks() < nextOpcodeTime)
-		return true;
+		return;
 
 	Opcode opcode = Fetch();
 	DecodeAndExecute(opcode);
 	nextOpcodeTime = SDL_GetTicks() + (1000.f / OPCODES_FREQUENCY);
 
-	return true;
+	return;
 }
 
 void Emulator::Shutdown()

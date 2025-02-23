@@ -78,13 +78,9 @@ void Chip8::Shutdown()
 bool Chip8::Run()
 {
 	if (!HandleEvents())
-	{
 		running = false;
-	}
 	else if (emulator != nullptr)
-	{
 		emulator->Run();
-	}
 
 	renderer->Render();
 

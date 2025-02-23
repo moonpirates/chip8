@@ -22,7 +22,7 @@ public:
 
 	// Core functionality
 	bool Init();
-	bool Run();
+	void Run();
 	void Shutdown();
 
 private:

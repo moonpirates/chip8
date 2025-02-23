@@ -45,7 +45,7 @@ bool Renderer::Init()
 
 	SDL_GPUTextureCreateInfo sceneTextureCreateInfo{};
 	sceneTextureCreateInfo.type = SDL_GPU_TEXTURETYPE_2D,
-	sceneTextureCreateInfo.width = windowSize.x; //TODO how does this perform when up sizing window?
+	sceneTextureCreateInfo.width = windowSize.x;
 	sceneTextureCreateInfo.height = windowSize.y;
 	sceneTextureCreateInfo.layer_count_or_depth = 1;
 	sceneTextureCreateInfo.num_levels = 1;
@@ -159,10 +159,8 @@ void Renderer::Render()
 		return;
 
 	// Render
-	if (redraw || true) // TODO remove true
+	if (redraw)
 	{
-		//RenderBuffer();
-
 		SDL_GPUCommandBuffer* commandBuffer = SDL_AcquireGPUCommandBuffer(gpuDevice);
 		if (commandBuffer == nullptr)
 		{
@@ -378,7 +376,7 @@ bool Renderer::SetupScenePipeline()
 		return false;
 	}	
 
-	SDL_GPUShader* fragmentShader = LoadShader(gpuDevice, "scene.frag", 0, 1, 0, 0); //TODO remove uniform?
+	SDL_GPUShader* fragmentShader = LoadShader(gpuDevice, "scene.frag", 0, 0, 0, 0);
 	if (fragmentShader == nullptr)
 	{
 		SDL_Log("Failed to create scene fragment shader.");
@@ -402,7 +400,7 @@ bool Renderer::SetupScenePipeline()
 
 	// Vertex color
 	vertexAttributes[1].buffer_slot = 0;
-	vertexAttributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_UBYTE4_NORM; //TODO make floats instead of [0..256] ints?
+	vertexAttributes[1].format = SDL_GPU_VERTEXELEMENTFORMAT_UBYTE4_NORM;
 	vertexAttributes[1].location = 1;
 	vertexAttributes[1].offset = sizeof(float) * 3; // Offset by the float3 of position
 

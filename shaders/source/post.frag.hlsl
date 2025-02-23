@@ -2,7 +2,7 @@
 #define FG_COLOR float4(0.196, 1.0, 0.4, 1.0)
 #define BG_COLOR float4(0.2, 0.2, 0.2, 1.0)
 #define MARGIN float2(0.05, 0.05)
-#define CURVATURE 5.0
+#define DISPLAY_CURVATURE 5.0
 #define BLUR_SIZE float2(2.0, 2.0)
 #define BLOOM_WEIGHT 0.75
 #define BLOOM_SIZE float2(10.0, 10.0)
@@ -64,7 +64,7 @@ float4 main(float2 uv : TEXCOORD0) : SV_Target0
 
 	// Curvature
 	uv = uv * 2.0 - 1.0;
-	float2 offset = uv.yx / CURVATURE;
+	float2 offset = uv.yx / DISPLAY_CURVATURE;
 	uv = uv + uv * offset * offset;
 	uv = uv * 0.5 + 0.5;
 

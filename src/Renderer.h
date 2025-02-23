@@ -50,7 +50,7 @@ private:
 	SDL_GPUTexture* sceneTexture;
 	SDL_GPUSampler* sampler;
 	
-	vector<vector<bool>> screenBuffer; //TODO find a smarter way to read the pixel data from SDL as this is redundant information, https://youtu.be/EW1zXX89pfM?t=5109
+	vector<vector<bool>> screenBuffer;
 	bool initialized = false;
 	bool redraw = true; // 'true' because we want to draw one frame to clear the screen
 	float nextRenderTime = 0.f;
