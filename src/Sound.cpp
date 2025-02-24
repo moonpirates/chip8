@@ -1,3 +1,5 @@
+// Copyright (c) 2025, Moonpirates. All rights reserved.
+
 #include "Sound.h"
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_audio.h"
@@ -35,8 +37,6 @@ void Sound::Shutdown()
 
 void Sound::AudioCallback(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount)
 {
-	// additional_amount 	the amount of data, in bytes, that is needed right now.
-	// total_amount 		the total amount of data requested, in bytes, that is requested or available.
 	Sound* sound = static_cast<Sound*>(userdata);
 
 	// Determine whether beep gate should be open
@@ -49,14 +49,13 @@ void Sound::AudioCallback(void* userdata, SDL_AudioStream* stream, int additiona
 	for (size_t i = 0; i < numFloats; i++)
 	{
 		// Short attack/decay to prevent pops from off axis sines
-		const float ATTACK_DECAY_STEP_SIZE = 0.01f;
 		if (shouldBePlaying && sound->volume < 1.f)
 			sound->volume = std::min(sound->volume + ATTACK_DECAY_STEP_SIZE, 1.f);
 		else if (!shouldBePlaying && sound->volume > 0.f)
 			sound->volume = std::max(sound->volume - ATTACK_DECAY_STEP_SIZE, 0.f);
 
 		// Generate sine multiplied by the desired amplitude and volume modifier
-		sound->samples[i] = std::sin(sound->phase * 2 * numbers::pi / sound->FREQUENCY) * BEEP_AMPLITUDE * sound->volume;
+		sound->samples[i] = (float)std::sin(sound->phase * 2 * numbers::pi / sound->FREQUENCY) * BEEP_AMPLITUDE * sound->volume;
 		sound->phase += BEEP_FREQUENCY;
 	}
 	

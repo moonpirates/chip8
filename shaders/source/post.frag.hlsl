@@ -14,7 +14,7 @@
 
 cbuffer UniformBlock : register(b0, space3)
 {
-	float2 windowSize;
+	int2 windowSize;
 };
 
 Texture2D ColorTexture : register(t0, space2);

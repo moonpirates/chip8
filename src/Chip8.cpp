@@ -1,3 +1,5 @@
+// Copyright (c) 2025, Moonpirates. All rights reserved.
+
 #include "Chip8.h"
 #include "Window.h"
 #include "Renderer.h"
@@ -60,7 +62,6 @@ void Chip8::Shutdown()
 
 	if (emulator != nullptr)
 	{
-		emulator->Shutdown();
 		delete emulator;
 		emulator = nullptr;
 	}
@@ -98,6 +99,8 @@ bool Chip8::InitROM()
 	emulator = new Emulator(romPath, renderer, sound);
 	if (!emulator->Init())
 		return false;
+
+	return true;
 }
 
 bool Chip8::HandleEvents()

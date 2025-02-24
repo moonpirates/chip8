@@ -1,3 +1,5 @@
+// Copyright (c) 2025, Moonpirates. All rights reserved.
+
 //#define CHIP8_ORIGINAL
 
 #include "Emulator.h"
@@ -30,7 +32,7 @@ const vector<SDL_Scancode> Emulator::KEY_MAP =
 };
 
 Emulator::Emulator(const string romPath, Renderer* renderer, Sound* sound) :
-	romPath(romPath),
+	romPath(romPath), //TODO initializer list stuff to header
 	renderer(renderer),
 	sound(sound),
 	memory(4096, 0),
@@ -41,7 +43,7 @@ Emulator::Emulator(const string romPath, Renderer* renderer, Sound* sound) :
 	soundTimer(0),
 	keys(0)
 {
-	srand(time(0));
+	srand((unsigned int)time(0));
 }
 
 bool Emulator::Init()
@@ -65,13 +67,6 @@ void Emulator::Run()
 	Opcode opcode = Fetch();
 	DecodeAndExecute(opcode);
 	nextOpcodeTime = SDL_GetTicks() + (1000.f / OPCODES_FREQUENCY);
-
-	return;
-}
-
-void Emulator::Shutdown()
-{
-
 }
 
 bool Emulator::LoadROM()
@@ -155,11 +150,7 @@ void Emulator::HandleTimers()
 		delayTimer--;
 
 	if (soundTimer > 0)
-	{
 		soundTimer--;
-		//if (soundTimer == 0)
-		//	sound->StopBeep();
-	}
 
 	nextTimerDecrementTime = SDL_GetTicks() + (1000.f / TIMER_DECREMENT_FREQUENCY);
 }
@@ -193,7 +184,6 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 				case 0x0E0:
 				{
 					renderer->Clear();
-					//printf("[CLEAR]\n");
 					break;
 				}
 
@@ -219,7 +209,6 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		case 0x1:
 		{
 			PC = nnn;
-			//printf("[SET PC] %02X\n", nnn);
 			break;
 		}
 		
@@ -237,7 +226,6 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			if (vars[x] == nn)
 			{
 				PC += 2;
-				//printf("[SKIP] vars[%d] (%d) == %d\n", x, vars[x], nn);
 			}
 			break;
 		}
@@ -248,7 +236,6 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			if (vars[x] != nn)
 			{
 				PC += 2;
-				//printf("[SKIP] vars[%d] (%d) != %d\n", x, vars[x], nn);
 			}
 			break;
 		}
@@ -259,7 +246,6 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			if (vars[x] == vars[y])
 			{
 				PC += 2;
-				//printf("[SKIP] vars[%d] (%d) == vars[%d] (%d)\n", x, vars[x], y, vars[y]);
 			}
 			break;
 		}
@@ -268,7 +254,6 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		case 0x6:
 		{
 			vars[x] = nn;
-			//printf("[SET] vars[%d] = %d\n", x, nn);
 			break;
 		}
 		
@@ -276,7 +261,6 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		case 0x7:
 		{
 			vars[x] += nn;
-			//printf("[INCREMENT] vars[%d] + %d\n", x, nn);
 			break;
 		}
 		
@@ -380,10 +364,8 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		case 0x9:
 		{
 			if (vars[x] != vars[y])
-			{
 				PC += 2;
-				//printf("[SKIP] vars[%d] (%d) != vars[%d] (%d)\n", x, vars[x], y, vars[y]);
-			}
+
 			break;
 		}
 		
@@ -391,7 +373,6 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		case 0xA:
 		{
 			I = nnn;
-			//printf("[SET I] %02X\n", nnn);
 			break;
 		}
 		
@@ -417,7 +398,6 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 		case 0xD:
 		{
 			renderer->Display(vars[x], vars[y], n, I, memory, vars);
-			//printf("[DISPLAY] x: %d y: %d, height: %d\n", vars[x], vars[y], n);
 			break;
 		}
 		
@@ -507,7 +487,7 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 				case 0x29:
 				{
 					uint8_t characterIndex = memory[x] & 0xF; // Only grab last nibble
-					characterIndex *= 0xFF * 0x5; // Get the right offset in memory
+					characterIndex *= (uint8_t)(0xFF * 0x5); // Get the right offset in memory
 					I = memory[FONT_START + characterIndex];
 					break;
 				}
@@ -572,12 +552,10 @@ void Emulator::DecodeAndExecute(Opcode opcode)
 			printf("*** UNKNOWN CODE: %02X\n", opcode);
 			break;
 		}
-
 	}
-
 }
 
-uint8_t Emulator::GetOpcodeNibble(Opcode opcode, int nibbleIndex) const
+uint8_t Emulator::GetOpcodeNibble(Opcode opcode, int nibbleIndex)
 {
 	assert(nibbleIndex <= 3);
 

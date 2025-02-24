@@ -1,5 +1,4 @@
 // Copyright (c) 2025, Moonpirates. All rights reserved.
-
 #pragma once
 
 // Includes

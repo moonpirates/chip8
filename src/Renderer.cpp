@@ -1,8 +1,10 @@
+// Copyright (c) 2025, Moonpirates. All rights reserved.
+
 #include "Renderer.h"
 #include "Window.h"
-#include <iostream>
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_gpu.h"
+#include <vector>
 
 typedef struct PositionColorVertex
 {
@@ -18,10 +20,9 @@ typedef struct PositionTextureVertex
 
 typedef struct ShaderUniform
 {
-	float w;
-	float h;
+	int w;
+	int h;
 } ShaderUniform;
-
 
 Renderer::Renderer(Window* window) : window(window)
 {
@@ -86,12 +87,14 @@ bool Renderer::Init()
 	transferBufferCreateInfo.size = (sizeof(PositionTextureVertex) * 4) + (sizeof(Uint16) * 6);
 	SDL_GPUTransferBuffer* transferBuffer = SDL_CreateGPUTransferBuffer(gpuDevice, &transferBufferCreateInfo);
 
+	// Post pipeline quad vertices
 	PositionTextureVertex* transferData = (PositionTextureVertex*)SDL_MapGPUTransferBuffer(gpuDevice, transferBuffer, false);
 	transferData[0] = { -1,  1, 0, 0, 0 };
 	transferData[1] = {  1,  1, 0, 1, 0 };
 	transferData[2] = {  1, -1, 0, 1, 1 };
 	transferData[3] = { -1, -1, 0, 0, 1 };
 
+	// Post pipeline quad indices
 	Uint16* indexData = (Uint16*)&transferData[4];
 	indexData[0] = 0;
 	indexData[1] = 1;
@@ -148,13 +151,10 @@ void Renderer::Shutdown()
 
 	SDL_ReleaseWindowFromGPUDevice(gpuDevice, window->GetSDLWindow());
 	SDL_DestroyGPUDevice(gpuDevice);
-	//SDL_DestroyRenderer(sdlRenderer);
 }
 
 void Renderer::Render()
 {
-	UpdateRenderScale();
-
 	if (SDL_GetTicks() < nextRenderTime)
 		return;
 
@@ -300,9 +300,6 @@ void Renderer::Render()
 void Renderer::Clear()
 {
 	// Clear screen
-	//SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, 255);
-	//SDL_RenderClear(sdlRenderer);
-
 	screenBuffer = vector<vector<bool>>(window->GetCanvasWidth(), vector<bool>(window->GetCanvasHeight(), false));
 }
 
@@ -338,10 +335,13 @@ void Renderer::Display(uint8_t x, uint8_t y, uint8_t n, uint16_t I, vector<uint8
 
 bool Renderer::OnWindowEvent(void* data, SDL_Event* event)
 {
+	// Enforce a redraw if the window size changes.
 	if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED || event->type == SDL_EVENT_WINDOW_RESIZED)
 	{
 		Renderer* renderer = static_cast<Renderer*>(data);
 		renderer->redraw = true;
+
+		return true;
 	}
 
 	return false;
@@ -610,34 +610,4 @@ SDL_GPUShader* Renderer::LoadShader(SDL_GPUDevice* device, const char* shaderFil
 	SDL_free(code);
 
 	return shader;
-	
 }
-
-void Renderer::UpdateRenderScale() const
-{
-	//// Get our window's current width/height
-	//int currentWidth;
-	//int currentHeight;
-	//SDL_GetWindowSize(window->GetSDLWindow(), &currentWidth, &currentHeight);
-
-	//// Calculate the scale of canvas in relation to our window
-	//const float scaleX = currentWidth / (float)window->GetCanvasWidth();
-	//const float scaleY = currentHeight / (float)window->GetCanvasHeight();
-	//
-	//// Update render scale
-	//SDL_SetRenderScale(sdlRenderer, scaleX, scaleY);
-}
-
-void Renderer::RenderBuffer()
-{
-	for (int y = 0; y < window->GetCanvasHeight(); y++)
-	{
-		for (int x = 0; x < window->GetCanvasWidth(); x++)
-		{
-			const int value = screenBuffer[x][y] ? 255 : 0;
-			//SDL_SetRenderDrawColor(sdlRenderer, value, value, value, 255);
-			//SDL_RenderPoint(sdlRenderer, x, y);
-		}
-	}
-}
-

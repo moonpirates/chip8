@@ -1,3 +1,5 @@
+// Copyright (c) 2025, Moonpirates. All rights reserved.
+
 #include "Window.h"
 #include "SDL3/SDL.h"
 
