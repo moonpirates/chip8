@@ -32,16 +32,11 @@ const vector<SDL_Scancode> Emulator::KEY_MAP =
 };
 
 Emulator::Emulator(const string romPath, Renderer* renderer, Sound* sound) :
-	romPath(romPath), //TODO initializer list stuff to header
+	romPath(romPath),
 	renderer(renderer),
 	sound(sound),
 	memory(4096, 0),
-	PC(PROGRAM_START),
-	I(0),
-	vars(16, 0),
-	delayTimer(0),
-	soundTimer(0),
-	keys(0)
+	vars(16, 0)
 {
 	srand((unsigned int)time(0));
 }

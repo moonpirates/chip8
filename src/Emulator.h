@@ -94,12 +94,12 @@ private:
 
 	vector<uint8_t> memory;									///< CHIP-8's core internal memory.
 	vector<uint8_t> vars;									///< CHIP-8's variable register.
-	uint16_t PC;											///< CHIP8's program counter, pointing to a specific instruction in memory.
-	uint16_t I;												///< CHIP8's index register, pointing to a specific memory location.
+	uint16_t PC = PROGRAM_START;							///< CHIP8's program counter, pointing to a specific instruction in memory.
+	uint16_t I = 0;											///< CHIP8's index register, pointing to a specific memory location.
 	stack<uint16_t> stack;									///< CHIP8's call stack, used for nested calls.
-	uint8_t delayTimer;										///< CHIP8's delay timer, used internally for timing events.
-	uint8_t soundTimer;										///< CHIP8's sound timer, which plays a sound when nonzero.
-	uint16_t keys;											///< Bitset of keys being pressed, ranging from [0xF..0x0].
+	uint8_t delayTimer = 0;									///< CHIP8's delay timer, used internally for timing events.
+	uint8_t soundTimer = 0;									///< CHIP8's sound timer, which plays a sound when nonzero.
+	uint16_t keys = 0;										///< Bitset of keys being pressed, ranging from [0xF..0x0].
 
 	const string romPath;									///< Path of the ROM we're emulating.
 	Renderer* renderer = nullptr;							///< Reference to the Renderer, used for Clear() and Display() opcodes.
